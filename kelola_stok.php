@@ -1,21 +1,24 @@
 <?php
-// File: kelola_stok.php (FINAL MODIFIED - Edit Produk Lengkap)
+// File: kelola_stok.php (FINAL MODIFIED - Fixed Edit Button & Error Handling)
+error_reporting(0); 
+ini_set('display_errors', 0); 
+
 include "config.php";
 session_start();
 
-// 1. Cek Login & Ambil ID User
 if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit(); 
 }
 $current_user_id = $_SESSION['user_id'];
 
-// 2. Logika UPDATE STOK CEPAT (Tetap dipertahankan)
+// 2. Logika UPDATE STOK CEPAT 
 if (isset($_POST['update_stok'])) {
     $id = $_POST['id'];
     $stok_baru = $_POST['stok'];
 
     $stmt = $connect->prepare("UPDATE produk SET stok = ? WHERE id = ? AND user_id = ?"); 
+    // Menggunakan Prepared Statement untuk keamanan
     $stmt->bind_param("iii", $stok_baru, $id, $current_user_id); 
 
     if ($stmt->execute()) {
@@ -27,10 +30,11 @@ if (isset($_POST['update_stok'])) {
     }
 }
 
-// 3. Logika HAPUS PRODUK (Tetap dipertahankan)
+// 3. Logika HAPUS PRODUK 
 if (isset($_POST['hapus_produk'])) {
     $id = $_POST['id'];
     
+    // Ambil path foto untuk dihapus (Otorisasi data disertakan di sini)
     $path_stmt = $connect->prepare("SELECT foto FROM produk WHERE id = ? AND user_id = ?");
     $path_stmt->bind_param("ii", $id, $current_user_id);
     $path_stmt->execute();
@@ -38,11 +42,13 @@ if (isset($_POST['hapus_produk'])) {
     $path_stmt->fetch();
     $path_stmt->close();
     
+    // Hapus dari database (Otorisasi data disertakan di sini)
     $stmt = $connect->prepare("DELETE FROM produk WHERE id = ? AND user_id = ?"); 
     $stmt->bind_param("ii", $id, $current_user_id); 
 
     if ($stmt->execute()) {
-        if ($foto_path && file_exists($foto_path)) {
+        // Hapus file foto dari server jika ada dan bukan default image
+        if ($foto_path && $foto_path !== 'uploads/no-image.png' && file_exists($foto_path)) {
             unlink($foto_path);
         }
         $stmt->close();
@@ -63,7 +69,7 @@ if (isset($_POST['hapus_produk'])) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     <style>
-        /* (CSS DARI UPDATE UI SEBELUMNYA HAMPIR SAMA) */
+        /* CSS DARI UPDATE UI SEBELUMNYA */
         body { font-family: sans-serif; padding: 30px 10px; background: #e9eef2; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); box-sizing: border-box;}
         .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee;}
@@ -83,14 +89,9 @@ if (isset($_POST['hapus_produk'])) {
         .btn-update:hover { background: #0056b3; }
         .btn-delete { background: #dc3545; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; transition: background 0.2s; font-size: 14px; }
         .btn-delete:hover { background: #c82333; }
-        
-        /* TOMBOL BARU EDIT DETAIL */
         .btn-edit-detail { background: #ffc107; color: #333; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; margin-left: 5px; font-size: 14px; }
         .btn-edit-detail:hover { background: #e0a800; }
-        
         input[type="number"] { width: 60px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px;}
-        
-        /* CSS MODAL */
         input[type="text"], input[type="number"], textarea, input[type="file"] { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; transition: border-color 0.3s;}
         input[type="text"]:focus, input[type="number"]:focus, textarea:focus { border-color: #0d6efd; outline: none; box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);}
         label { display: block; font-weight: bold; margin-top: 10px; color: #333;}
@@ -110,7 +111,6 @@ if (isset($_POST['hapus_produk'])) {
         @media (max-width: 600px) { 
             .modal-content { margin: 10px auto; padding: 15px; } 
             .form-group-flex { flex-direction: column; gap: 0; } 
-            /* (Responsive table CSS sebelumnya) */
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -139,6 +139,7 @@ if (isset($_POST['hapus_produk'])) {
         </thead>
         <tbody>
             <?php
+            // Menggunakan query standar karena user_id sudah aman dari $_SESSION
             $tampil = mysqli_query($connect, "SELECT * FROM produk WHERE user_id = '$current_user_id' ORDER BY nama ASC");
             if (mysqli_num_rows($tampil) > 0) {
                 while ($data = mysqli_fetch_array($tampil)) {
@@ -210,12 +211,13 @@ if (isset($_POST['hapus_produk'])) {
         </form>
     </div>
 </div>
+
 <div id="editProductModal" class="modal">
     <div class="modal-content">
         <span class="close-btn" data-modal-target="editProductModal">&times;</span>
         <h2 style="text-align:center;">Edit Detail Produk</h2>
 
-        <form id="editProductForm" method="POST" enctype="multipart/form-data">
+        <form id="editProductForm" action="edit_product.php" method="POST" enctype="multipart/form-data">
             
             <input type="hidden" id="edit_id" name="edit_id">
             <input type="hidden" id="edit_old_foto_path" name="edit_old_foto_path">
@@ -249,18 +251,18 @@ if (isset($_POST['hapus_produk'])) {
         </form>
     </div>
 </div>
+
 <script>
 $(document).ready(function(){
     var addModal = $('#addProductModal');
     var editModal = $('#editProductModal');
     
-    // --- OPEN MODAL TAMBAH PRODUK ---
+    // --- OPEN & CLOSE MODALS ---
     $('#openModalBtn').on('click', function(e) {
         e.preventDefault();
         addModal.show();
     });
 
-    // --- CLOSE MODALS ---
     $('.close-btn').on('click', function() {
         $(this).closest('.modal').hide();
     });
@@ -270,12 +272,12 @@ $(document).ready(function(){
         }
     });
 
-    // --- LOGIKA AJAX TAMBAH PRODUK (Sama seperti sebelumnya) ---
-    // ... (Kode AJAX Tambah Produk Form di sini) ...
+    // --- LOGIKA AJAX TAMBAH PRODUK ---
     var namaInput = $('#nama');
     var validationMsg = $('#productValidation');
     var isDuplicate = false; 
 
+    // Pengecekan Duplikat Real-Time
     namaInput.on('keyup', function() {
         const productName = $(this).val().trim();
         if (productName.length > 2) {
@@ -283,6 +285,7 @@ $(document).ready(function(){
                 url: 'check_product.php',
                 type: 'GET',
                 data: { nama: productName },
+                dataType: 'json',
                 success: function(response) {
                     isDuplicate = response.exists;
                     if (isDuplicate) {
@@ -299,6 +302,7 @@ $(document).ready(function(){
         }
     });
     
+    // Submit Form Tambah Produk
     $('#addProductForm').on('submit', function(e){
         e.preventDefault(); 
         if (isDuplicate) {
@@ -317,7 +321,7 @@ $(document).ready(function(){
             success: function(response){
                 var result;
                 try {
-                    result = JSON.parse(response);
+                    result = (typeof response === 'string') ? JSON.parse(response) : response;
                 } catch (e) {
                     alert('Error parsing server response: ' + response);
                     return;
@@ -330,13 +334,15 @@ $(document).ready(function(){
                     window.location.reload(); 
                 }
             },
-            error: function(){
-                alert('Terjadi kesalahan saat koneksi ke server.');
+            error: function(xhr, status, error){
+                alert('Terjadi kesalahan saat koneksi ke server Tambah Produk.');
+                console.error("AJAX Error (Add):", status, error, xhr.responseText);
             }
         });
     });
     
     // --- LOGIKA AJAX EDIT DETAIL PRODUK ---
+    // Handler untuk tombol "Edit Detail"
     $('.btn-edit-detail').on('click', function() {
         const productId = $(this).data('id');
         
@@ -355,12 +361,13 @@ $(document).ready(function(){
                     $('#editProductForm #edit_harga').val(data.harga);
                     $('#editProductForm #edit_deskripsi').val(data.deskripsi);
                     
-                    // Simpan path foto lama untuk proses penghapusan
-                    $('#editProductForm #edit_old_foto_path').val(data.foto); 
+                    // Simpan path foto lama dan siapkan preview
+                    const oldPath = data.foto || 'uploads/no-image.png';
+                    $('#editProductForm #edit_old_foto_path').val(oldPath); 
+                    $('#current_foto_display').attr('src', oldPath);
                     
-                    // Tampilkan gambar saat ini
-                    const imgUrl = data.foto ? data.foto : 'uploads/no-image.png';
-                    $('#current_foto_display').attr('src', imgUrl);
+                    // Reset input file agar tidak mengirim file kosong jika tidak diganti
+                    $('#editProductForm #edit_foto').val(''); 
                     
                     // 3. Tampilkan Modal Edit
                     editModal.show();
@@ -368,13 +375,14 @@ $(document).ready(function(){
                     alert('Gagal mengambil data produk: ' + data.message);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
                 alert('Terjadi kesalahan koneksi saat mencoba mengambil data produk.');
+                console.error("AJAX Error (Get):", status, error, xhr.responseText);
             }
         });
     });
     
-// 4. Submit Form Edit (Update Data)
+    // 4. Submit Form Edit (Update Data)
     $('#editProductForm').on('submit', function(e) {
         e.preventDefault();
         
@@ -387,10 +395,19 @@ $(document).ready(function(){
             data: formData,
             contentType: false, 
             processData: false, 
-            dataType: 'json', // <--- PERBAIKAN KRUSIAL: Memaksa jQuery untuk mengharapkan JSON
-            success: function(result) {
+            success: function(response) {
+                var result;
+                try {
+                    // Coba parse respons yang diterima
+                    result = (typeof response === 'string') ? JSON.parse(response) : response;
+                } catch (e) {
+                    console.error("AJAX Error: Failed to parse JSON response.", e);
+                    console.log("Raw Response:", response);
+                    // Tambahkan pesan yang lebih membantu jika JSON parsing gagal
+                    alert('Error parsing server response. Ini mungkin disebabkan oleh output PHP yang tidak murni. Cek konsol browser.');
+                    return;
+                }
                 
-                // PERBAIKAN: Tidak perlu lagi try/catch JSON.parse() karena menggunakan dataType: 'json'
                 alert(result.message);
 
                 if(result.status === 'success') {
@@ -399,15 +416,13 @@ $(document).ready(function(){
                 }
             },
             error: function(xhr, status, error) {
-                // Tampilkan pesan error yang lebih detail jika parsing gagal
-                console.error("AJAX Error:", status, error);
+                console.error("AJAX Error (Submit Edit):", status, error);
                 console.error("Response Text:", xhr.responseText);
-                alert('Terjadi kesalahan saat koneksi atau mengurai respons server. Cek konsol browser untuk detail.');
+                alert('Terjadi kesalahan koneksi atau server internal error saat update. Pastikan file edit_product.php bersih dari tag penutup PHP dan tidak ada spasi di luar tag PHP pembuka.');
             }
         });
     });
 });
 </script>
-
 </body>
 </html>
