@@ -1,5 +1,11 @@
 <?php
 include "config.php";
+session_start();
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit(); // Stop loading halaman
+}
+// ... kode sisanya di bawah ...
 
 // --- LOGIKA UPDATE STOK ---
 if (isset($_POST['update_stok'])) {

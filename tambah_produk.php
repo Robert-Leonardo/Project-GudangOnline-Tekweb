@@ -21,28 +21,20 @@ if (!isset($_SESSION['username'])) {
     </style>
 </head>
 <body>
-
     <div class="container">
         <a href="home.php" class="btn-back">← Batal</a>
         <h2 style="text-align:center;">Tambah Produk Baru</h2>
-
         <form action="add_product.php" method="POST">
-            
             <label>Nama Produk</label>
             <input type="text" name="nama" required>
-
             <label>Harga (Rp)</label>
             <input type="number" name="harga" required>
-
             <label>Stok Awal</label>
             <input type="number" name="stok" required>
-
             <label>Deskripsi</label>
             <textarea name="deskripsi" rows="3"></textarea>
-
             <button type="submit">Simpan Produk</button>
         </form>
     </div>
-
 </body>
 </html>

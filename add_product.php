@@ -1,6 +1,10 @@
 <?php
 include "config.php";
-
+session_start();
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit(); // Stop loading halaman
+}
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nama = $_POST['nama'];
     $harga = $_POST['harga'];
