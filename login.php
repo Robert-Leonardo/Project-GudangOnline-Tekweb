@@ -4,16 +4,26 @@
 session_start(); 
 include 'config.php';
 
-// --- LOGIKA LOGOUT "PURE" ---
+// --- LOGIKA LOGOUT "KERAS" ---
+// Menangkap link dari home.php?logout=true
 if (isset($_GET['logout'])) {
-    // 1. Hapus semua variabel session
+    // 1. Kosongkan semua data session
     $_SESSION = [];
     session_unset();
     
     // 2. Hancurkan session di server
     session_destroy();
 
-    // 3. Redirect ke halaman login
+    // 3. Paksa hapus cookie session di browser (Biar bersih total)
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+
+    // 4. Refresh halaman ke login murni
     header("Location: login.php");
     exit();
 }
@@ -23,6 +33,7 @@ if (isset($_POST['login'])) {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
+    // Ambil password hash dari DB
     $stmt = $connect->prepare("SELECT password FROM usernames WHERE name = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
@@ -32,9 +43,10 @@ if (isset($_POST['login'])) {
         $stmt->bind_result($hashed_password);
         $stmt->fetch();
 
+        // Verifikasi password
         if (password_verify($password, $hashed_password)) {
-            // Login Berhasil -> Buat Session Baru
-            session_regenerate_id(true); // Ganti ID biar aman (anti-bajak)
+            // Login Berhasil -> Buat Session Baru (Tiket Masuk)
+            session_regenerate_id(true); // Ganti ID session biar aman
             $_SESSION['username'] = $username; 
             
             // Redirect ke home

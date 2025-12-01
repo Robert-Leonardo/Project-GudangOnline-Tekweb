@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// 1. Cek apakah user login
+// 1. Cek apakah user login (SATPAM)
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
@@ -11,6 +11,7 @@ if (!isset($_SESSION['username'])) {
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
+
 include "config.php";
 ?>
 <!DOCTYPE html>
@@ -24,7 +25,7 @@ include "config.php";
             background: linear-gradient(to left,white,rgb(120, 120, 236));
             margin: 0;
             padding: 0;
-            display: flex; /* Biar posisi selalu di tengah layar */
+            display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -32,7 +33,7 @@ include "config.php";
 
         .container {
             width: 100%;
-            max-width: 600px; /* Lebarkan dikit biar enak dilihat */
+            max-width: 600px;
             background: white;
             padding: 40px;
             border-radius: 20px;
@@ -82,7 +83,7 @@ include "config.php";
     <a href="tambah_produk.php" class="btn btn-blue">Tambah Produk Baru</a>
     
     <br>
-    <a href="login.php" style="color: red; text-decoration: none; font-weight: bold;">Logout</a>
+    <a href="login.php?logout=true" style="color: red; text-decoration: none; font-weight: bold;">Logout</a>
 </div>
 
 </body>
