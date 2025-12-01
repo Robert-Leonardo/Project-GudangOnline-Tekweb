@@ -1,13 +1,18 @@
 <?php
-// File: login_register.php
+session_start();
 
+// 1. Cek apakah user login
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 include "config.php";
 
-// Pastikan request method POST dan tombol register diklik
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['register'])) {
-    header('Location: login.php');
-    exit;
-}
 
 // Ambil dan bersihkan input
 $username = isset($_POST['username']) ? trim($_POST['username']) : '';

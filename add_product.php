@@ -1,10 +1,18 @@
 <?php
-include "config.php";
 session_start();
+
+// 1. Cek apakah user login
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
-    exit(); // Stop loading halaman
+    exit();
 }
+
+// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+include "config.php";
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nama = $_POST['nama'];
     $harga = $_POST['harga'];

@@ -1,17 +1,18 @@
 <?php
-// File: login.php
-// WAJIB: Start session di baris paling atas
-session_start(); 
-include 'config.php';
+session_start();
 
-// --- LOGIKA LOGOUT ---
-// Kalau ada link login.php?logout=true diklik, hapus session
-if (isset($_GET['logout'])) {
-    session_destroy();
-    unset($_SESSION['username']);
+// 1. Cek apakah user login
+if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
+
+// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+include "config.php";
+
 
 // ---------------- LOGIN ----------------
 if (isset($_POST['login'])) {
