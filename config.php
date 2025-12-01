@@ -8,6 +8,6 @@ $database = "gudang_db";
 $connect = new mysqli($host, $username, $password, $database);
 
 if ($connect->connect_error) {
-    die("Connection failed: " . $connect->connect_error);
+    die("Koneksi database gagal: " . $connect->connect_error);
 }
 ?>

@@ -1,14 +1,18 @@
 <?php
+// File: lihat_stok.php (MODIFIED - Isolasi Gudang)
 // --- SATPAM (SECURITY CHECK) ---
 session_start();
 
-// 1. Cek Tiket Login
-if (!isset($_SESSION['username'])) {
+// 1. Cek Tiket Login & Ambil ID User
+if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
     header("Location: login.php");
-    exit(); // Stop loading halaman
+    exit(); 
 }
+// --- BARIS KRUSIAL: AMBIL USER ID DARI SESSION ---
+$current_user_id = $_SESSION['user_id'];
+// -------------------------------------------------
 
-// 2. Hapus Cache (Supaya tombol Back gak berfungsi pas logout)
+// 2. Hapus Cache 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -28,7 +32,6 @@ include "config.php";
         th, td { padding: 12px; border: 1px solid #ddd; text-align: center; vertical-align: middle; }
         th { background: #0d6efd; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
-        
         .btn-back { background: #555; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-bottom: 15px;}
         .btn-back:hover { background: #333; }
     </style>
@@ -50,7 +53,8 @@ include "config.php";
         </thead>
         <tbody>
             <?php
-            $query = mysqli_query($connect, "SELECT * FROM produk");
+            // PERUBAHAN KRUSIAL: Hanya ambil data milik user ini
+            $query = mysqli_query($connect, "SELECT * FROM produk WHERE user_id = '$current_user_id'");
             
             // Cek apakah ada data?
             if(mysqli_num_rows($query) > 0){
@@ -69,7 +73,7 @@ include "config.php";
             <?php 
                 }
             } else {
-                echo "<tr><td colspan='4'>Belum ada produk.</td></tr>";
+                echo "<tr><td colspan='4'>Belum ada produk di gudang Anda.</td></tr>";
             }
             ?>
         </tbody>

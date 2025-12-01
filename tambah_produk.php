@@ -1,10 +1,10 @@
 <?php
 session_start();
-
+// File: tambah_produk.php
 // 1. CEK LOGIN
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
-    exit(); // PENTING: Stop loading halaman
+    exit(); 
 }
 
 // 2. MATIKAN CACHE
@@ -30,21 +30,24 @@ header("Pragma: no-cache");
 <body>
 
     <div class="container">
-        <a href="home.php" class="btn-back">← Kembali</a>
+        <a href="kelola_stok.php" class="btn-back">← Kembali</a>
         <h2 style="text-align:center;">Tambah Produk Baru</h2>
 
-        <form action="add_product.php" method="POST">
+        <form action="add_product.php" method="POST" enctype="multipart/form-data">
             <label>Nama Produk</label>
             <input type="text" name="nama" required>
 
             <label>Harga (Rp)</label>
-            <input type="number" name="harga" required>
+            <input type="number" name="harga" required min="0">
 
             <label>Stok Awal</label>
-            <input type="number" name="stok" required>
+            <input type="number" name="stok" required min="0">
 
             <label>Deskripsi</label>
             <textarea name="deskripsi" rows="3"></textarea>
+            
+            <label style="margin-top: 10px; display: block;">Foto Produk</label>
+            <input type="file" name="foto" accept="image/*" required>
 
             <button type="submit">Simpan Produk</button>
         </form>

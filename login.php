@@ -1,20 +1,14 @@
 <?php
-// File: login.php
-// WAJIB: Start session di baris paling atas
+// File: login.php (MODIFIED - Menyimpan user_id & UI Fix)
 session_start(); 
 include 'config.php';
 
 // --- LOGIKA LOGOUT "KERAS" ---
-// Menangkap link dari home.php?logout=true
 if (isset($_GET['logout'])) {
-    // 1. Kosongkan semua data session
     $_SESSION = [];
     session_unset();
-    
-    // 2. Hancurkan session di server
     session_destroy();
-
-    // 3. Paksa hapus cookie session di browser (Biar bersih total)
+    
     if (ini_get("session.use_cookies")) {
         $params = session_get_cookie_params();
         setcookie(session_name(), '', time() - 42000,
@@ -23,7 +17,6 @@ if (isset($_GET['logout'])) {
         );
     }
 
-    // 4. Refresh halaman ke login murni
     header("Location: login.php");
     exit();
 }
@@ -33,128 +26,143 @@ if (isset($_POST['login'])) {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Ambil password hash dari DB
-    $stmt = $connect->prepare("SELECT password FROM usernames WHERE name = ?");
+    // Ambil ID dan password hash dari DB
+    $stmt = $connect->prepare("SELECT id, password FROM usernames WHERE name = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
+    
+    // Bind hasil ke $id dan $hashed_password
+    $stmt->bind_result($id, $hashed_password); 
 
-    if ($stmt->num_rows > 0) {
-        $stmt->bind_result($hashed_password);
+    if ($stmt->num_rows == 1) {
         $stmt->fetch();
-
-        // Verifikasi password
+        
         if (password_verify($password, $hashed_password)) {
-            // Login Berhasil -> Buat Session Baru (Tiket Masuk)
-            session_regenerate_id(true); // Ganti ID session biar aman
-            $_SESSION['username'] = $username; 
+            // Login Berhasil
+            session_regenerate_id(true);
             
-            // Redirect ke home
+            // --- BARIS KRUSIAL: SIMPAN ID USER ---
+            $_SESSION['user_id'] = $id; 
+            // ------------------------------------
+            $_SESSION['username'] = $username;
+
             header("Location: home.php");
             exit();
         } else {
-            echo "<script>alert('Username atau password salah!');</script>";
+            echo "<script>alert('Username atau Password salah!'); window.location.href='login.php';</script>";
         }
     } else {
-        echo "<script>alert('Username atau password salah!');</script>";
+        echo "<script>alert('Username atau Password salah!'); window.location.href='login.php';</script>";
     }
     $stmt->close();
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Page</title>
 
     <style>
-        body{
+        /* CSS Fix untuk memastikan form terlihat */
+        body {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(to right,white,rgb(120, 120, 236));
+            background: linear-gradient(to right, #ffffff, #63a4ff);
             color: #333;
+            margin: 0;
         }
 
-        .container{
-            margin:0 15px;
-        }
-
-        .form-box{
+        .wrapper {
+            perspective: 1000px;
             width: 100%;
-            max-width: 450px;
-            padding: 30px;
+            max-width: 400px; 
+            height: 480px; 
+            position: relative;
+        }
+
+        .form-box {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 40px;
             background: #fff;
             border-radius: 15px;
-            box-shadow:0 0 15px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             box-sizing: border-box;
-            display: none;
+            backface-visibility: hidden; 
+            transition: transform 0.8s;
         }
 
-        .form-box.active{
-            display: block;
-        }
-
-        form{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        h3{
-            font-size: 40px;
+        .form-box h3 {
+            font-size: 32px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            color: #0d6efd; 
         }
 
-        input{
-          width: 100%;
-          padding: 12px;
-          background: #eee;
-          border-radius: 6px;
-          border: none;
-          outline: none;
-          font-size: 15px;
-          color: black;
-          margin-bottom: 20px;
-          box-sizing: border-box;
-        }
-
-        button{
+        .form-box input {
             width: 100%;
             padding: 12px;
-            background: rgb(120,120,236);
+            margin-bottom: 15px;
+            background: #f4f4f4;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            outline: none;
+            font-size: 16px;
+            color: black;
+            box-sizing: border-box;
+        }
+
+        .form-box button {
+            width: 100%;
+            padding: 12px;
+            background: #0d6efd; 
             color: white;
             border: none;
-            border-radius: 6px;
-            font-size: 15px;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-top: 10px;
+            font-weight: bold;
+            transition: background 0.3s;
         }
 
-        button:hover{
-            background: rgb(90,90,210);
+        .form-box button:hover {
+            background: #0b5ed7;
         }
         
-        p{
-            font-size: 20px;
-            margin-bottom: 10px;
+        .form-box p {
+            font-size: 14px;
+            text-align: center;
+            margin-top: 20px;
         }
-
+        
+        .form-box a {
+            color: #0d6efd;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        /* Flip Logic CSS */
+        #login-form { transform: rotateY(0deg); }
+        #register-form { transform: rotateY(180deg); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="form-box active" id="login-form">
+    <div class="wrapper">
+        <div class="form-box" id="login-form">
             <form action="login.php" method="post">
                 <h3>Login</h3>
                 <input type="text" name="username" placeholder="Username" required>
                 <input type="password" name="password" placeholder="Password" required>
                 <button type="submit" name="login">Login</button>
-                <p>Create account? <a href="#" onclick="showForm('register-form')">Here</a></p>
+                <p>Belum punya akun? <a href="#" onclick="showForm('register-form')">Daftar di sini</a></p>
             </form>
         </div>
 
@@ -163,20 +171,25 @@ if (isset($_POST['login'])) {
                 <h3>Register</h3>
                 <input type="text" name="username" placeholder="Username" required>
                 <input type="password" name="password" placeholder="Password" required>
+                <input type="password" name="confirm_password" placeholder="Konfirmasi Password" required>
                 <button type="submit" name="register">Register</button>
-                <p>Already have account? <a href="#" onclick="showForm('login-form')">back</a></p>
+                <p>Sudah punya akun? <a href="#" onclick="showForm('login-form')">Kembali ke Login</a></p>
             </form>
         </div>
     </div>
     
     <script>
     function showForm(formId) {
-        const forms = document.querySelectorAll('.form-box');
-        forms.forEach(form => {
-        form.classList.remove('active');
-        });
-
-    document.getElementById(formId).classList.add('active');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        
+        if (formId === 'register-form') {
+            loginForm.style.transform = 'rotateY(-180deg)';
+            registerForm.style.transform = 'rotateY(0deg)';
+        } else {
+            registerForm.style.transform = 'rotateY(180deg)';
+            loginForm.style.transform = 'rotateY(0deg)';
+        }
     }
     </script>
 </body>

@@ -1,20 +1,38 @@
 <?php
+// File: home.php
 // --- START SYSTEM ---
 session_start();
 
-// 1. CEK APAKAH BAWA TIKET? (Session)
+// 1. CEK KONEKSI SERVER & DATABASE
+include "config.php";
+
+// Cek apakah koneksi database gagal setelah server dinyalakan
+// $connect adalah objek mysqli dari config.php
+if (!$connect || $connect->connect_error) {
+    // Jika koneksi gagal, paksa logout
+    $_SESSION = [];
+    session_unset();
+    session_destroy();
+    
+    // Redirect ke login.php
+    header("Location: login.php");
+    exit();
+}
+// ------------------------------------------
+
+// 2. CEK APAKAH BAWA TIKET? (Session)
 if (!isset($_SESSION['username'])) {
     // Kalau gak punya tiket, TENDANG ke login
     header("Location: login.php");
-    exit(); // <--- INI KUNCINYA. Kalau gak ada ini, script lanjut jalan ke bawah (tembus).
+    exit(); 
 }
 
-// 2. MATIKAN CACHE (Supaya gak bisa di-Back)
+// 3. MATIKAN CACHE (Supaya gak bisa di-Back setelah logout)
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-include "config.php";
+// ... sisa kode HTML di bawah ...
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -71,19 +89,29 @@ include "config.php";
         .btn-blue:hover {
             background: #0b5ed7;
         }
+        
+        .btn-logout {
+            background: #dc3545; /* Merah */
+            margin-top: 30px;
+        }
+
+        .btn-logout:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Halo, <?php echo $_SESSION['username']; ?>!</h1>
+    <h1>Selamat Datang, <?php echo htmlspecialchars($_SESSION['username']); ?>!</h1>
+    <p>Silakan pilih menu yang ingin Anda kelola:</p>
 
-    <a href="lihat_stok.php" class="btn btn-blue">Lihat Stok Produk</a>
+    <div class="menu">
+        <a href="lihat_stok.php" class="btn btn-blue">Lihat Semua Stok Produk (AJAX)</a>
+        <a href="kelola_stok.php" class="btn btn-blue">Kelola Stok & Hapus Produk</a>
+    </div>
     
-    <a href="kelola_stok.php" class="btn btn-blue">Tambah / Hapus Stok Produk</a>
-    
-    <br>
-    <a href="login.php?logout=true" style="color: red; text-decoration: none; font-weight: bold;">Logout</a>
+    <a href="login.php?logout=true" class="btn btn-logout" onclick="return confirm('Apakah Anda yakin ingin keluar?');">Logout</a>
 </div>
 
 </body>
