@@ -1,25 +1,28 @@
 <?php
-session_start();
+// File: login.php
+// WAJIB: Start session di baris paling atas
+session_start(); 
+include 'config.php';
 
-// 1. Cek apakah user login
-if (!isset($_SESSION['username'])) {
+// --- LOGIKA LOGOUT "PURE" ---
+if (isset($_GET['logout'])) {
+    // 1. Hapus semua variabel session
+    $_SESSION = [];
+    session_unset();
+    
+    // 2. Hancurkan session di server
+    session_destroy();
+
+    // 3. Redirect ke halaman login
     header("Location: login.php");
     exit();
 }
 
-// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
-include "config.php";
-
-
-// ---------------- LOGIN ----------------
+// ---------------- LOGIKA LOGIN ----------------
 if (isset($_POST['login'])) {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Ambil password hash
     $stmt = $connect->prepare("SELECT password FROM usernames WHERE name = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
@@ -29,23 +32,21 @@ if (isset($_POST['login'])) {
         $stmt->bind_result($hashed_password);
         $stmt->fetch();
 
-        // Verifikasi password
         if (password_verify($password, $hashed_password)) {
-            // --- BAGIAN PENTING: SET SESSION ---
-            // Ini tiket masuknya. Kalau ini ga ada, kamu bakal ditendang terus dari home.php
+            // Login Berhasil -> Buat Session Baru
+            session_regenerate_id(true); // Ganti ID biar aman (anti-bajak)
             $_SESSION['username'] = $username; 
             
-            // Redirect pakai PHP Header (lebih cepat & aman buat session)
+            // Redirect ke home
             header("Location: home.php");
-            exit;
+            exit();
         } else {
-            $stmt->close();
             echo "<script>alert('Username atau password salah!');</script>";
         }
     } else {
-        $stmt->close();
         echo "<script>alert('Username atau password salah!');</script>";
     }
+    $stmt->close();
 }
 ?>
 
