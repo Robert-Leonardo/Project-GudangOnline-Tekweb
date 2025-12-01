@@ -82,8 +82,6 @@ include "config.php";
     
     <a href="kelola_stok.php" class="btn btn-blue">Tambah / Hapus Stok Produk</a>
     
-    <a href="tambah_produk.php" class="btn btn-blue">Tambah Produk Baru</a>
-    
     <br>
     <a href="login.php?logout=true" style="color: red; text-decoration: none; font-weight: bold;">Logout</a>
 </div>
