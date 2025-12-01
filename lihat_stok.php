@@ -13,7 +13,6 @@ include "config.php";
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
         th { background: #0d6efd; color: white; }
-        img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
         .btn-back { background: #555; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-bottom: 15px;}
     </style>
 </head>
@@ -26,7 +25,6 @@ include "config.php";
     <table>
         <thead>
             <tr>
-                <th>Foto</th>
                 <th>Nama Produk</th>
                 <th>Harga</th>
                 <th>Stok</th>
@@ -39,7 +37,6 @@ include "config.php";
             while ($data = mysqli_fetch_array($query)) {
             ?>
             <tr>
-                <td><img src="<?php echo $data['foto']; ?>" alt="Foto"></td>
                 <td><?php echo $data['nama']; ?></td>
                 <td>Rp <?php echo number_format($data['harga']); ?></td>
                 <td><?php echo $data['stok']; ?></td>

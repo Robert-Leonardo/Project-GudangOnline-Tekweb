@@ -1,5 +1,4 @@
 <?php
-// Bagian ini buat ngecek: Apakah user sudah login?
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -27,7 +26,8 @@ if (!isset($_SESSION['username'])) {
         <a href="home.php" class="btn-back">← Batal</a>
         <h2 style="text-align:center;">Tambah Produk Baru</h2>
 
-        <form action="add_product.php" method="POST" enctype="multipart/form-data">
+        <form action="add_product.php" method="POST">
+            
             <label>Nama Produk</label>
             <input type="text" name="nama" required>
 
@@ -39,9 +39,6 @@ if (!isset($_SESSION['username'])) {
 
             <label>Deskripsi</label>
             <textarea name="deskripsi" rows="3"></textarea>
-
-            <label>Foto Produk</label>
-            <input type="file" name="foto" required>
 
             <button type="submit">Simpan Produk</button>
         </form>
