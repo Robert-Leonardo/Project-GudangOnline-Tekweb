@@ -1,5 +1,5 @@
 <?php
-// File: kelola_stok.php (MODIFIED - Isolasi Gudang)
+// File: kelola_stok.php (FINAL MODIFIED)
 include "config.php";
 session_start();
 
@@ -8,16 +8,13 @@ if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit(); 
 }
-// --- BARIS KRUSIAL: AMBIL USER ID DARI SESSION ---
 $current_user_id = $_SESSION['user_id'];
-// -------------------------------------------------
 
 // 2. Logika UPDATE STOK 
 if (isset($_POST['update_stok'])) {
     $id = $_POST['id'];
     $stok_baru = $_POST['stok'];
 
-    // PERUBAHAN KRUSIAL: Tambahkan AND user_id = ?
     $stmt = $connect->prepare("UPDATE produk SET stok = ? WHERE id = ? AND user_id = ?"); 
     $stmt->bind_param("iii", $stok_baru, $id, $current_user_id); 
 
@@ -33,12 +30,24 @@ if (isset($_POST['update_stok'])) {
 // 3. Logika HAPUS PRODUK
 if (isset($_POST['hapus_produk'])) {
     $id = $_POST['id'];
-
-    // PERUBAHAN KRUSIAL: Tambahkan AND user_id = ?
+    
+    // Ambil path foto untuk dihapus (Opsional, untuk cleanup)
+    $path_stmt = $connect->prepare("SELECT foto FROM produk WHERE id = ? AND user_id = ?");
+    $path_stmt->bind_param("ii", $id, $current_user_id);
+    $path_stmt->execute();
+    $path_stmt->bind_result($foto_path);
+    $path_stmt->fetch();
+    $path_stmt->close();
+    
+    // Hapus data dari DB
     $stmt = $connect->prepare("DELETE FROM produk WHERE id = ? AND user_id = ?"); 
     $stmt->bind_param("ii", $id, $current_user_id); 
 
     if ($stmt->execute()) {
+        // Hapus file fisik jika ada
+        if ($foto_path && file_exists($foto_path)) {
+            unlink($foto_path);
+        }
         $stmt->close();
         echo "<script>alert('Produk berhasil dihapus!'); window.location.href='kelola_stok.php';</script>";
     } else {
@@ -57,19 +66,108 @@ if (isset($_POST['hapus_produk'])) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     <style>
-        /* (CSS Tampilan UI Bagus Anda di sini) */
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; vertical-align: middle; }
-        th { background: #0d6efd; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .btn-back { background: #555; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block;}
-        .btn-add { background: #0d6efd; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; cursor: pointer; } 
-        .btn-update { background: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
-        .btn-delete { background: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
-        input[type="number"] { width: 70px; padding: 5px; text-align: center; }
+        /* UI FIX: Gaya body dan container yang lebih bersih */
+        body { 
+            font-family: sans-serif; 
+            padding: 30px 10px; 
+            background: #e9eef2; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            box-sizing: border-box;
+        }
+
+        /* Header Control */
+        .header-controls { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 25px; 
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        h2 {
+            font-size: 28px;
+            color: #0d6efd;
+            margin-bottom: 20px;
+        }
+
+        /* Tombol */
+        .btn-back { 
+            background: #6c757d; 
+            color: white; 
+            padding: 10px 15px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        .btn-back:hover { background: #5a6268; }
+
+        .btn-add { 
+            background: #28a745; 
+            color: white; 
+            padding: 10px 15px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            display: inline-block; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-add:hover { background: #218838; }
+        
+        /* Tabel */
+        table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0;
+            margin-top: 25px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 10px;
+            overflow: hidden; 
+        }
+        th, td { 
+            padding: 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+        th { 
+            background: #0d6efd; 
+            color: white; 
+            font-weight: 600;
+            text-align: center;
+        }
+        td {
+            text-align: center;
+        }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:last-child td { border-bottom: none; }
+        
+        /* Gambar Produk di Tabel */
+        .product-img-col img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        /* Input & Aksi Tabel */
+        .btn-update { background: #007bff; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; transition: background 0.2s; }
+        .btn-update:hover { background: #0056b3; }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; transition: background 0.2s; }
+        .btn-delete:hover { background: #c82333; }
+        
+        input[type="number"] { width: 60px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* --- CSS MODAL --- */
         input[type="text"], input[type="number"], textarea, input[type="file"] { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; transition: border-color 0.3s;}
         input[type="text"]:focus, input[type="number"]:focus, textarea:focus { border-color: #0d6efd; outline: none; box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25); }
         label { display: block; font-weight: bold; margin-top: 10px; color: #333; }
@@ -82,7 +180,23 @@ if (isset($_POST['hapus_produk'])) {
         .close-btn:hover, .close-btn:focus { color: #dc3545; text-decoration: none; cursor: pointer;}
         #addProductForm button[type="submit"] { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; padding: 12px; border-radius: 6px; margin-top: 20px; transition: background 0.2s; width: 100%;}
         #addProductForm button[type="submit"]:hover { background: #218838; }
-        @media (max-width: 600px) { .modal-content { margin: 10px auto; padding: 15px; } .form-group-flex { flex-direction: column; gap: 0; } }
+        .product-validation-msg {
+            font-size: 12px;
+            color: orange;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        @media (max-width: 600px) { 
+            .modal-content { margin: 10px auto; padding: 15px; } 
+            .form-group-flex { flex-direction: column; gap: 0; } 
+            table, thead, tbody, th, td, tr { display: block; } /* Membuat tabel responsif */
+            tr { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px;}
+            td { text-align: right; border: none; position: relative; padding-left: 50%; }
+            td:before { content: attr(data-label); position: absolute; left: 6px; width: 45%; padding-right: 10px; white-space: nowrap; font-weight: bold; text-align: left; }
+            thead { display: none; }
+        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
@@ -101,7 +215,7 @@ if (isset($_POST['hapus_produk'])) {
     <table>
         <thead>
             <tr>
-                <th>Nama Produk</th>
+                <th>Gambar</th> <th>Nama Produk</th>
                 <th>Harga</th>
                 <th>Stok (Edit Angka)</th>
                 <th>Aksi</th>
@@ -109,16 +223,19 @@ if (isset($_POST['hapus_produk'])) {
         </thead>
         <tbody>
             <?php
-            // PERUBAHAN KRUSIAL: Hanya tampilkan produk milik user ini
             $tampil = mysqli_query($connect, "SELECT * FROM produk WHERE user_id = '$current_user_id' ORDER BY nama ASC");
             if (mysqli_num_rows($tampil) > 0) {
                 while ($data = mysqli_fetch_array($tampil)) {
+                    $foto_url = $data['foto'] ? $data['foto'] : 'uploads/default.png'; // Fallback jika tidak ada foto
             ?>
             <tr>
-                <td><?php echo $data['nama']; ?></td>
-                <td>Rp <?php echo number_format($data['harga']); ?></td>
+                <td data-label="Gambar" class="product-img-col">
+                    <img src="<?php echo htmlspecialchars($foto_url); ?>" alt="<?php echo htmlspecialchars($data['nama']); ?>">
+                </td>
+                <td data-label="Nama Produk"><?php echo htmlspecialchars($data['nama']); ?></td>
+                <td data-label="Harga">Rp <?php echo number_format($data['harga']); ?></td>
                 
-                <td>
+                <td data-label="Stok (Edit Angka)">
                     <form method="POST" style="display:flex; gap:5px; justify-content:center;">
                         <input type="hidden" name="id" value="<?php echo $data['id']; ?>">
                         <input type="number" name="stok" value="<?php echo $data['stok']; ?>" required min="0">
@@ -126,8 +243,8 @@ if (isset($_POST['hapus_produk'])) {
                     </form>
                 </td>
 
-                <td>
-                    <form method="POST" onsubmit="return confirm('Yakin mau hapus produk <?php echo $data['nama']; ?> permanen?');">
+                <td data-label="Aksi">
+                    <form method="POST" onsubmit="return confirm('Yakin mau hapus produk <?php echo htmlspecialchars($data['nama']); ?> permanen?');">
                         <input type="hidden" name="id" value="<?php echo $data['id']; ?>">
                         <button type="submit" name="hapus_produk" class="btn-delete">Hapus</button>
                     </form>
@@ -136,7 +253,7 @@ if (isset($_POST['hapus_produk'])) {
             <?php 
                 }
             } else {
-                echo "<tr><td colspan='4'>Belum ada produk di gudang Anda.</td></tr>";
+                echo "<tr><td colspan='5' style='text-align:center; padding: 30px;'>Belum ada produk di gudang Anda.</td></tr>";
             }
             ?>
         </tbody>
@@ -152,17 +269,16 @@ if (isset($_POST['hapus_produk'])) {
 
         <form id="addProductForm" action="add_product.php" method="POST" enctype="multipart/form-data">
             
-            <label for="nama">Nama Produk</label>
+            <label for="nama">Nama Produk <span style="color:red;">*</span></label>
             <input type="text" id="nama" name="nama" required>
-
-            <div class="form-group-flex">
+            <div id="productValidation" class="product-validation-msg"></div> <div class="form-group-flex">
                 <div>
-                    <label for="harga">Harga (Rp)</label>
-                    <input type="number" id="harga" name="harga" required min="0">
+                    <label for="stok">Stok Awal <span style="color:red;">*</span></label>
+                    <input type="number" id="stok" name="stok" required min="0" value="0">
                 </div>
                 <div>
-                    <label for="stok">Stok Awal</label>
-                    <input type="number" id="stok" name="stok" required min="0">
+                    <label for="harga">Harga (Rp)</label>
+                    <input type="number" id="harga" name="harga" min="0">
                 </div>
             </div>
 
@@ -170,9 +286,7 @@ if (isset($_POST['hapus_produk'])) {
             <textarea id="deskripsi" name="deskripsi" rows="4"></textarea>
             
             <label style="margin-top: 10px; display: block;" for="foto">Foto Produk</label>
-            <input type="file" id="foto" name="foto" accept="image/*" required>
-
-            <button type="submit">Simpan Produk</button>
+            <input type="file" id="foto" name="foto" accept="image/*"> <button type="submit">Simpan Produk</button>
         </form>
     </div>
 </div>
@@ -181,16 +295,51 @@ $(document).ready(function(){
     var modal = $('#addProductModal');
     var openBtn = $('#openModalBtn');
     var closeBtn = $('.close-btn');
+    var namaInput = $('#nama');
+    var validationMsg = $('#productValidation');
+    
+    // Status duplikat
+    var isDuplicate = false; 
 
     openBtn.on('click', function(e) { e.preventDefault(); modal.show(); });
     closeBtn.on('click', function() { modal.hide(); });
     $(window).on('click', function(event) {
         if (event.target.id === 'addProductModal') { modal.hide(); }
     });
+    
+    // --- AJAX Pre-check untuk Nama Produk ---
+    namaInput.on('keyup', function() {
+        const productName = $(this).val().trim();
+        if (productName.length > 2) {
+            $.ajax({
+                url: 'check_product.php',
+                type: 'GET',
+                data: { nama: productName },
+                success: function(response) {
+                    isDuplicate = response.exists;
+                    if (isDuplicate) {
+                        validationMsg.text('Produk ini sudah ada di gudang Anda!');
+                        validationMsg.show();
+                    } else {
+                        validationMsg.hide();
+                    }
+                }
+            });
+        } else {
+            validationMsg.hide();
+            isDuplicate = false;
+        }
+    });
 
     // --- LOGIKA AJAX SUBMISSION ---
     $('#addProductForm').on('submit', function(e){
         e.preventDefault(); 
+        
+        // VALIDASI TERAKHIR SEBELUM SUBMIT
+        if (isDuplicate) {
+            alert('Gagal: Nama produk ini sudah ada. Harap ganti nama produk.');
+            return;
+        }
 
         var formData = new FormData(this); 
 
@@ -205,7 +354,7 @@ $(document).ready(function(){
                 try {
                     result = JSON.parse(response);
                 } catch (e) {
-                    alert('Error parsing server response.');
+                    alert('Error parsing server response: ' + response);
                     return;
                 }
                 
@@ -221,7 +370,6 @@ $(document).ready(function(){
             }
         });
     });
-
 });
 </script>
 

@@ -1,38 +1,51 @@
 <?php
-// File: home.php
-// --- START SYSTEM ---
+// File: home.php (MODIFIED - Tambahan Tautan Marketplace)
 session_start();
-
-// 1. CEK KONEKSI SERVER & DATABASE
 include "config.php";
 
-// Cek apakah koneksi database gagal setelah server dinyalakan
-// $connect adalah objek mysqli dari config.php
+// ... (Logika Cek Koneksi, Cek Session, dan Ambil Statistik Gudang tetap sama) ...
 if (!$connect || $connect->connect_error) {
-    // Jika koneksi gagal, paksa logout
     $_SESSION = [];
     session_unset();
     session_destroy();
-    
-    // Redirect ke login.php
     header("Location: login.php");
     exit();
 }
-// ------------------------------------------
 
-// 2. CEK APAKAH BAWA TIKET? (Session)
-if (!isset($_SESSION['username'])) {
-    // Kalau gak punya tiket, TENDANG ke login
+if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit(); 
 }
 
-// 3. MATIKAN CACHE (Supaya gak bisa di-Back setelah logout)
+$current_user_id = $_SESSION['user_id'];
+
+// 3. AMBIL DATA STATISTIK GUDANG (Tetap sama)
+$total_produk = 0;
+$total_stok = 0;
+$stok_habis = 0;
+
+$stmt = $connect->prepare("SELECT COUNT(id) AS total_produk, SUM(stok) AS total_stok FROM produk WHERE user_id = ?");
+$stmt->bind_param("i", $current_user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($data = $result->fetch_assoc()) {
+    $total_produk = $data['total_produk'] ?? 0;
+    $total_stok = $data['total_stok'] ?? 0;
+}
+$stmt->close();
+
+$stmt_habis = $connect->prepare("SELECT COUNT(id) AS stok_habis FROM produk WHERE user_id = ? AND stok = 0");
+$stmt_habis->bind_param("i", $current_user_id);
+$stmt_habis->execute();
+$result_habis = $stmt_habis->get_result();
+if ($data_habis = $result_habis->fetch_assoc()) {
+    $stok_habis = $data_habis['stok_habis'] ?? 0;
+}
+$stmt_habis->close();
+
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-
-// ... sisa kode HTML di bawah ...
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -48,12 +61,12 @@ header("Pragma: no-cache");
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
         }
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 900px; 
             background: white;
             padding: 40px;
             border-radius: 20px;
@@ -62,16 +75,61 @@ header("Pragma: no-cache");
         }
 
         h1 {
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             color: #222;
             font-size: 32px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: #f8f9fa; 
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .stat-card.total-product .stat-value { color: #0d6efd; }
+        .stat-card.total-stock .stat-value { color: #28a745; }
+        .stat-card.stock-empty .stat-value { color: #dc3545; }
+
+        .menu {
+            /* Diubah menjadi 3 kolom grid */
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
         }
 
         .btn {
             display: block;
-            width: 100%;
+            width: 100%; /* Dibuat 100% agar mengisi grid */
             padding: 16px;
-            margin: 15px 0;
             text-align: center;
             border-radius: 8px;
             text-decoration: none;
@@ -85,30 +143,65 @@ header("Pragma: no-cache");
         .btn-blue {
             background: #0d6efd;
         }
+        
+        /* Warna Baru untuk Marketplace */
+        .btn-purple {
+            background: #6f42c1;
+        }
+        .btn-purple:hover {
+            background: #5a34a1;
+        }
 
         .btn-blue:hover {
             background: #0b5ed7;
         }
         
         .btn-logout {
-            background: #dc3545; /* Merah */
-            margin-top: 30px;
+            background: #dc3545;
         }
 
         .btn-logout:hover {
             background: #c82333;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .menu {
+                grid-template-columns: 1fr; /* Tumpuk menu di mobile */
+            }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Selamat Datang, <?php echo htmlspecialchars($_SESSION['username']); ?>!</h1>
+    <h1>Halo, <?php echo htmlspecialchars($_SESSION['username']); ?>! 👋</h1>
+    
+    <p>Selamat datang di Dasbor Gudang Anda. Berikut adalah ringkasan stok saat ini:</p>
+
+    <div class="stats-grid">
+        <div class="stat-card total-product">
+            <div class="stat-value"><?php echo number_format($total_produk); ?></div>
+            <div class="stat-label">Total Jenis Produk</div>
+        </div>
+        <div class="stat-card total-stock">
+            <div class="stat-value"><?php echo number_format($total_stok); ?></div>
+            <div class="stat-label">Total Kuantitas Stok</div>
+        </div>
+        <div class="stat-card stock-empty">
+            <div class="stat-value"><?php echo number_format($stok_habis); ?></div>
+            <div class="stat-label">Produk Stok Habis</div>
+        </div>
+    </div>
     <p>Silakan pilih menu yang ingin Anda kelola:</p>
 
     <div class="menu">
-        <a href="lihat_stok.php" class="btn btn-blue">Lihat Semua Stok Produk (AJAX)</a>
-        <a href="kelola_stok.php" class="btn btn-blue">Kelola Stok & Hapus Produk</a>
+        <a href="marketplace.php" class="btn btn-purple">Lihat Semua Toko (Marketplace)</a> 
+        
+        <a href="lihat_stok.php" class="btn btn-blue">Lihat Gudang Anda (Galeri)</a>
+        <a href="kelola_stok.php" class="btn btn-blue">Kelola Stok & Tambah Produk</a>
     </div>
     
     <a href="login.php?logout=true" class="btn btn-logout" onclick="return confirm('Apakah Anda yakin ingin keluar?');">Logout</a>
