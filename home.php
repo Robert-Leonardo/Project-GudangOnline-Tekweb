@@ -200,7 +200,7 @@ header("Pragma: no-cache");
     <div class="menu">
         <a href="marketplace.php" class="btn btn-purple">Lihat Semua Toko (Marketplace)</a> 
         
-        <a href="lihat_stok.php" class="btn btn-blue">Lihat Gudang Anda (Galeri)</a>
+        <a href="lihat_stok.php" class="btn btn-blue">Lihat Toko Anda (Galeri)</a>
         <a href="kelola_stok.php" class="btn btn-blue">Kelola Stok & Tambah Produk</a>
     </div>
     
