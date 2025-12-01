@@ -1,17 +1,16 @@
 <?php
 session_start();
 
-// 1. Cek apakah user login
+// 1. CEK LOGIN
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
-    exit();
+    exit(); // PENTING: Stop loading halaman
 }
 
-// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
+// 2. MATIKAN CACHE
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-include "config.php";
 ?>
 
 <!DOCTYPE html>
@@ -29,20 +28,27 @@ include "config.php";
     </style>
 </head>
 <body>
+
     <div class="container">
-        <a href="home.php" class="btn-back">← Batal</a>
+        <a href="home.php" class="btn-back">← Kembali</a>
         <h2 style="text-align:center;">Tambah Produk Baru</h2>
+
         <form action="add_product.php" method="POST">
             <label>Nama Produk</label>
             <input type="text" name="nama" required>
+
             <label>Harga (Rp)</label>
             <input type="number" name="harga" required>
+
             <label>Stok Awal</label>
             <input type="number" name="stok" required>
+
             <label>Deskripsi</label>
             <textarea name="deskripsi" rows="3"></textarea>
+
             <button type="submit">Simpan Produk</button>
         </form>
     </div>
+
 </body>
 </html>

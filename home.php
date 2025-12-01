@@ -1,13 +1,15 @@
 <?php
+// --- START SYSTEM ---
 session_start();
 
-// 1. Cek apakah user login (SATPAM)
+// 1. CEK APAKAH BAWA TIKET? (Session)
 if (!isset($_SESSION['username'])) {
+    // Kalau gak punya tiket, TENDANG ke login
     header("Location: login.php");
-    exit();
+    exit(); // <--- INI KUNCINYA. Kalau gak ada ini, script lanjut jalan ke bawah (tembus).
 }
 
-// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
+// 2. MATIKAN CACHE (Supaya gak bisa di-Back)
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -74,7 +76,7 @@ include "config.php";
 <body>
 
 <div class="container">
-    <h1>Gudang Online</h1>
+    <h1>Halo, <?php echo $_SESSION['username']; ?>!</h1>
 
     <a href="lihat_stok.php" class="btn btn-blue">Lihat Stok Produk</a>
     

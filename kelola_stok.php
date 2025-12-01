@@ -1,19 +1,20 @@
 <?php
+// --- 1. SATPAM & ANTI-CACHE (WAJIB DI ATAS) ---
 session_start();
 
-// 1. Cek apakah user login
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
 
-// 2. Mencegah Browser Cache (Supaya tombol Back gak bisa dipake pas logout)
+// Hapus Cache Browser
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
+
 include "config.php";
 
-// --- LOGIKA UPDATE STOK ---
+// --- 2. LOGIKA UPDATE STOK ---
 if (isset($_POST['update_stok'])) {
     $id = $_POST['id'];
     $stok_baru = $_POST['stok'];
@@ -24,11 +25,11 @@ if (isset($_POST['update_stok'])) {
     echo "<script>alert('Stok berhasil diupdate!'); window.location.href='kelola_stok.php';</script>";
 }
 
-// --- LOGIKA HAPUS PRODUK ---
+// --- 3. LOGIKA HAPUS PRODUK ---
 if (isset($_POST['hapus_produk'])) {
     $id = $_POST['id'];
 
-    // Langsung hapus data dari database (Tidak perlu hapus file foto lagi)
+    // Hapus data langsung (Tanpa hapus foto karena fitur foto sudah dimatikan)
     $query = "DELETE FROM produk WHERE id = '$id'";
     mysqli_query($connect, $query);
 
@@ -47,10 +48,11 @@ if (isset($_POST['hapus_produk'])) {
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: center; vertical-align: middle; }
         th { background: #0d6efd; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
         
         .btn-back { background: #555; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-bottom: 15px;}
-        .btn-update { background: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
-        .btn-delete { background: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        .btn-update { background: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .btn-delete { background: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         
         input[type="number"] { width: 70px; padding: 5px; text-align: center; }
     </style>
