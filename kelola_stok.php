@@ -70,7 +70,7 @@ if (isset($_POST['hapus_produk'])) {
     
     <style>
         /* CSS DARI UPDATE UI SEBELUMNYA */
-        body { font-family: sans-serif; padding: 30px 10px; background: #e9eef2; }
+        body { font-family: sans-serif; padding: 30px 10px; background: linear-gradient(to left, white, rgb(120, 120, 236)); }
         .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); box-sizing: border-box;}
         .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee;}
         h2 { font-size: 28px; color: #0d6efd; margin-bottom: 20px;}
