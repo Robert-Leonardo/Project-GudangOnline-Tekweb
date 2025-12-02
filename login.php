@@ -76,20 +76,44 @@ if (isset($_POST['login'])) {
             background: linear-gradient(to right, #ffffff, #63a4ff);
             color: #333;
             margin: 0;
+            /* Font dasar sans-serif */
+            font-family: Arial, sans-serif; 
         }
-
+        
+        /* CSS Diperbarui untuk teks sambutan - Jarak Didekatkan */
+        .welcome-text {
+            font-family: inherit;
+            font-size: 38px; 
+            font-weight: 900; 
+            color: #0d6efd; 
+            margin-bottom: 20px;
+            /* NILAI DIKECILKAN: Ini akan menggeser teks ke bawah, mendekati form */
+            margin-top: -100px; 
+            text-align: center;
+            padding: 10px 0;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8);
+            background: none; 
+            box-shadow: none; 
+            width: 100%;
+            letter-spacing: 1px;
+        }
+        
         .wrapper {
             perspective: 1000px;
             width: 100%;
-            max-width: 400px; 
-            height: 480px; 
+            max-width: 500px; 
+            height: 600px; 
             position: relative;
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         .form-box {
             position: absolute;
             width: 100%;
-            height: 100%;
+            height: 480px; 
             padding: 40px;
             background: #fff;
             border-radius: 15px;
@@ -97,6 +121,8 @@ if (isset($_POST['login'])) {
             box-sizing: border-box;
             backface-visibility: hidden; 
             transition: transform 0.8s;
+            /* NILAI DIKECILKAN: Ini akan menggeser form ke atas, mendekati teks */
+            top: 100px; 
         }
 
         .form-box h3 {
@@ -156,6 +182,10 @@ if (isset($_POST['login'])) {
 </head>
 <body>
     <div class="wrapper">
+        <div class="welcome-text">
+            Welcome to Gudang Online
+        </div>
+        
         <div class="form-box" id="login-form">
             <form action="login.php" method="post">
                 <h3>Login</h3>
