@@ -41,7 +41,7 @@ if (!isset($_SESSION['username'])) {
 
         h2 { 
             font-size: 28px;
-            color: #6f42c1; /* Warna Ungu Marketplace */
+            color: #6f42c1;
             margin: 0;
         }
         
@@ -155,7 +155,7 @@ if (!isset($_SESSION['username'])) {
 <div class="container">
     
     <div class="header-controls">
-        <h2>Marketplace Produk Semua Toko</h2>
+        <h2>Marketplace</h2>
         <a href="home.php" class="btn-back">← Kembali ke Dasbor</a>
     </div>
 
