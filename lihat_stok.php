@@ -1,20 +1,37 @@
 <?php
-// File: lihat_stok.php (MODIFIED - Tampilan Galeri & Isolasi Gudang)
+// File: lihat_stok.php (MODIFIED - Multi-Gudang Logic)
 session_start();
+include "config.php";
 
-// 1. Cek Tiket Login & Ambil ID User
-if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+// 1. Cek Tiket Login & Ambil ID User dan Gudang Aktif
+if (!isset($_SESSION['username']) || !isset($_SESSION['user_id']) || !isset($_SESSION['active_gudang_id'])) {
+    if (isset($_SESSION['user_id'])) {
+        header("Location: pilih_gudang.php");
+    } else {
+        header("Location: login.php");
+    }
     exit(); 
 }
+
 $current_user_id = $_SESSION['user_id'];
+$active_gudang_id = $_SESSION['active_gudang_id'];
 
 // 2. Hapus Cache 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-include "config.php";
+// Ambil Nama Gudang Aktif untuk Judul
+$gudang_name_query = $connect->prepare("SELECT nama_gudang FROM gudang WHERE id = ?");
+$gudang_name_query->bind_param("i", $active_gudang_id);
+$gudang_name_query->execute();
+$gudang_name_result = $gudang_name_query->get_result();
+$active_gudang_name = "Gudang Tidak Ditemukan";
+if ($gudang_data = $gudang_name_result->fetch_assoc()) {
+    $active_gudang_name = htmlspecialchars($gudang_data['nama_gudang']);
+}
+$gudang_name_query->close();
+
 ?>
 
 <!DOCTYPE html>
@@ -22,9 +39,8 @@ include "config.php";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lihat Semua Stok Produk</title>
+    <title>Lihat Stok <?php echo $active_gudang_name; ?></title>
     <style>
-        /* Mengambil gaya background dari home.php */
         body {
             font-family: Arial, sans-serif;
             background: linear-gradient(to left, white, rgb(120, 120, 236));
@@ -46,143 +62,131 @@ include "config.php";
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            flex-wrap: wrap; 
         }
 
         h2 { 
-            font-size: 28px;
-            color: #0d6efd;
-            margin: 0;
+            font-size: 28px; 
+            color: #333; 
+            margin: 0; 
         }
         
-        .btn-back { 
+        .btn-back {
             background: #6c757d; 
             color: white; 
-            padding: 10px 15px; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            display: inline-block;
-            transition: background 0.2s;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            margin-top: 10px;
         }
         .btn-back:hover { background: #5a6268; }
 
-        /* --- Tampilan Galeri Produk (Grid) --- */
         .product-grid {
             display: grid;
-            /* Layout 4 kolom di desktop */
-            grid-template-columns: repeat(4, 1fr); 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
 
         .product-card {
             background: #fff;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #ddd;
             border-radius: 10px;
-            padding: 15px;
-            text-align: left;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
             overflow: hidden;
-            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .product-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
         }
 
         .product-image-box {
-            height: 180px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 15px;
-            border-radius: 8px;
+            height: 200px;
             overflow: hidden;
-            background: #f8f8f8;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .product-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-card > * {
+            padding: 15px;
+            line-height: 1.4;
         }
 
         .product-name {
-            font-size: 16px;
+            font-size: 1.2em;
             font-weight: bold;
             color: #333;
+            margin-top: 0;
             margin-bottom: 5px;
-            height: 40px;
-            overflow: hidden;
         }
 
         .product-description {
-            font-size: 14px;
-            color: #777;
+            color: #6c757d;
+            font-size: 0.9em;
             margin-bottom: 10px;
-            height: 36px;
-            overflow: hidden;
         }
 
         .product-price {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0d6efd;
-            margin-top: 10px;
+            font-size: 1.3em;
+            color: #28a745;
+            font-weight: bold;
+            margin-top: 0;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
         }
         
-        .product-stok-label {
-            font-size: 14px;
-            color: #777;
-            margin-top: 5px;
-            font-weight: bold;
-        }
-
-        /* Badge Stok Kosong */
-        .stock-empty {
-            color: white;
-            background: #dc3545; /* Merah */
-            padding: 4px 8px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        
-        /* Badge Stok Ada */
         .stock-available {
-            color: white;
-            background: #28a745; /* Hijau */
-            padding: 4px 8px;
-            border-radius: 5px;
+            color: #0d6efd;
             font-weight: bold;
         }
-
+        .stock-empty {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
         .alert-empty {
             text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #6c757d;
-            border: 1px dashed #ccc;
-            border-radius: 10px;
-            margin-top: 30px;
+            grid-column: 1 / -1; 
+            padding: 20px;
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            font-weight: bold;
         }
 
-        /* Responsif untuk tablet dan mobile */
-        @media (max-width: 992px) {
-            .product-grid {
-                grid-template-columns: repeat(3, 1fr);
+        @media (max-width: 600px) {
+            .header-controls {
+                flex-direction: column;
+                align-items: stretch;
             }
-        }
-        @media (max-width: 768px) {
-            .product-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .btn-back {
+                width: 100%;
+                box-sizing: border-box;
+                text-align: center;
             }
-        }
-        @media (max-width: 576px) {
+            h2 {
+                text-align: center;
+                margin-top: 15px;
+            }
             .product-grid {
                 grid-template-columns: 1fr;
-            }
-            .container {
-                padding: 20px;
             }
         }
     </style>
@@ -190,38 +194,52 @@ include "config.php";
 <body>
 
 <div class="container">
-    
     <div class="header-controls">
-        <h2>Daftar Stok Produk</h2>
-        <a href="home.php" class="btn-back">← Kembali ke Home</a>
+        <a href="home.php" class="btn-back">← Kembali ke Beranda</a>
+        <h2>Galeri Stok Gudang: <?php echo $active_gudang_name; ?></h2>
     </div>
 
     <div class="product-grid">
         <?php
-        $query = mysqli_query($connect, "SELECT * FROM produk WHERE user_id = '$current_user_id' ORDER BY nama ASC");
+        // Query hanya mengambil produk dari gudang aktif (Penting: filter gudang_id)
+        $query = $connect->prepare("
+            SELECT 
+                id, nama, harga, stok, deskripsi, foto 
+            FROM 
+                produk 
+            WHERE 
+                gudang_id = ?
+            ORDER BY 
+                nama ASC
+        ");
+        $query->bind_param("i", $active_gudang_id);
+        $query->execute();
+        $result = $query->get_result();
         
-        if(mysqli_num_rows($query) > 0){
-            while ($data = mysqli_fetch_array($query)) {
-                $foto_url = $data['foto'] ? htmlspecialchars($data['foto']) : 'uploads/no-image.png'; // Fallback image path
+        if($result->num_rows > 0){
+            while ($data = $result->fetch_array()) {
+                $foto_url = $data['foto'] ? htmlspecialchars($data['foto']) : 'uploads/no-image.png'; 
                 $stok_status = $data['stok'] > 0 ? 'stock-available' : 'stock-empty';
-                $stok_text = $data['stok'] > 0 ? $data['stok'] . ' Tersedia' : 'HABIS';
+                $stok_text = $data['stok'] > 0 ? number_format($data['stok']) . ' Tersedia' : 'HABIS';
         ?>
         <div class="product-card">
-            <div class="product-image-box">
-                <img src="<?php echo $foto_url; ?>" alt="<?php echo htmlspecialchars($data['nama']); ?>" class="product-image">
-            </div>
-            
-            <p class="product-description" style="color: #0d6efd; font-weight: bold; margin-bottom: 2px;">
-                <span class="<?php echo $stok_status; ?>"><?php echo $stok_text; ?></span>
-            </p>
+            <div>
+                <div class="product-image-box">
+                    <img src="<?php echo $foto_url; ?>" alt="<?php echo htmlspecialchars($data['nama']); ?>" class="product-image">
+                </div>
+                
+                <p class="product-description" style="color: #0d6efd; font-weight: bold; margin-bottom: 2px;">
+                    <span class="<?php echo $stok_status; ?>"><?php echo $stok_text; ?></span>
+                </p>
 
-            <p class="product-name">
-                <?php echo htmlspecialchars($data['nama']); ?>
-            </p>
-            
-            <p class="product-description">
-                <?php echo htmlspecialchars($data['deskripsi'] ?: 'Deskripsi belum ditambahkan.'); ?>
-            </p>
+                <p class="product-name">
+                    <?php echo htmlspecialchars($data['nama']); ?>
+                </p>
+                
+                <p class="product-description">
+                    <?php echo htmlspecialchars($data['deskripsi'] ?: 'Deskripsi belum ditambahkan.'); ?>
+                </p>
+            </div>
             
             <p class="product-price">
                 Rp <?php echo number_format($data['harga']); ?>
@@ -230,8 +248,9 @@ include "config.php";
         <?php 
             }
         } else {
-            echo '<div class="alert-empty" style="grid-column: 1 / -1;">Belum ada produk di gudang Anda.</div>';
+            echo '<div class="alert-empty">Tidak ada produk yang ditemukan di Gudang Aktif ini.</div>';
         }
+        $query->close();
         ?>
     </div>
 </div>

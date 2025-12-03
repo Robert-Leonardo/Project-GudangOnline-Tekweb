@@ -1,12 +1,12 @@
 <?php
-// File: check_product.php
+// File: check_product.php (MODIFIED - Multi-Gudang Logic)
 session_start();
 include "config.php";
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['exists' => false, 'error' => 'Not logged in.']);
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['active_gudang_id'])) {
+    echo json_encode(['exists' => false, 'error' => 'Not logged in or active warehouse not set.']);
     exit();
 }
 
@@ -16,16 +16,16 @@ if (!isset($_GET['nama'])) {
 }
 
 $nama = trim($_GET['nama']);
-$user_id = $_SESSION['user_id'];
+$active_gudang_id = $_SESSION['active_gudang_id'];
 
 if (empty($nama)) {
     echo json_encode(['exists' => false]);
     exit();
 }
 
-// Menggunakan Prepared Statement untuk keamanan
-$stmt = $connect->prepare("SELECT id FROM produk WHERE nama = ? AND user_id = ?");
-$stmt->bind_param("si", $nama, $user_id);
+// Menggunakan Prepared Statement untuk keamanan (Penting: filter gudang_id)
+$stmt = $connect->prepare("SELECT id FROM produk WHERE nama = ? AND gudang_id = ?");
+$stmt->bind_param("si", $nama, $active_gudang_id);
 $stmt->execute();
 $stmt->store_result();
 

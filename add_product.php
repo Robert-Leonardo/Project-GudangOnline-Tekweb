@@ -1,14 +1,15 @@
 <?php
-// File: add_product.php (MODIFIED - Minimal Field & Validasi)
+// File: add_product.php (MODIFIED - Multi-Gudang Logic)
 session_start();
 include "config.php";
 
-if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['username']) || !isset($_SESSION['user_id']) || !isset($_SESSION['active_gudang_id'])) {
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'Sesi berakhir, silakan login kembali.']);
+    echo json_encode(['status' => 'error', 'message' => 'Sesi berakhir atau Gudang Aktif belum diset. Silakan pilih gudang.']);
     exit();
 }
 $user_id = $_SESSION['user_id'];
+$active_gudang_id = $_SESSION['active_gudang_id']; // ID Gudang Aktif
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
@@ -16,9 +17,9 @@ header("Pragma: no-cache");
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nama = $_POST['nama'];
-    $harga = isset($_POST['harga']) && is_numeric($_POST['harga']) ? $_POST['harga'] : 0; // TIDAK WAJIB, default 0
-    $stok = isset($_POST['stok']) && is_numeric($_POST['stok']) ? $_POST['stok'] : 0; // WAJIB
-    $deskripsi = isset($_POST['deskripsi']) ? $_POST['deskripsi'] : NULL; // TIDAK WAJIB
+    $harga = isset($_POST['harga']) && is_numeric($_POST['harga']) ? (float)$_POST['harga'] : 0;
+    $stok = isset($_POST['stok']) && is_numeric($_POST['stok']) ? (int)$_POST['stok'] : 0; 
+    $deskripsi = isset($_POST['deskripsi']) ? trim($_POST['deskripsi']) : NULL; 
     
     header('Content-Type: application/json');
     
@@ -27,15 +28,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit();
     }
     
-    // --- VALIDASI DUPLIKAT DI SISI SERVER ---
-    $check_stmt = $connect->prepare("SELECT id FROM produk WHERE nama = ? AND user_id = ?");
-    $check_stmt->bind_param("si", $nama, $user_id);
+    // --- VALIDASI DUPLIKAT NAMA PRODUK (DI DALAM GUDANG AKTIF INI) ---
+    $check_stmt = $connect->prepare("SELECT id FROM produk WHERE nama = ? AND gudang_id = ?");
+    $check_stmt->bind_param("si", $nama, $active_gudang_id);
     $check_stmt->execute();
     $check_stmt->store_result();
-    
+
     if ($check_stmt->num_rows > 0) {
         $check_stmt->close();
-        echo json_encode(['status' => 'warning', 'message' => 'Produk dengan nama tersebut sudah ada di gudang Anda!']);
+        echo json_encode(['status' => 'error', 'message' => 'Produk dengan nama ini sudah ada di gudang aktif Anda!']);
         exit();
     }
     $check_stmt->close();
@@ -53,7 +54,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             mkdir($folder, 0777, true);
         }
 
-        $path = $folder . basename($fotoName);
+        // Generate nama file unik
+        $file_extension = strtolower(pathinfo($fotoName, PATHINFO_EXTENSION));
+        $unique_name = uniqid('img_', true) . '.' . $file_extension;
+        $path = $folder . $unique_name;
         
         if (!move_uploaded_file($fotoTmp, $path)) {
              echo json_encode(['status' => 'error', 'message' => 'Gagal upload foto!']);
@@ -61,21 +65,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // Insert ke database
-    $query = "INSERT INTO produk (user_id, nama, harga, stok, deskripsi, foto) VALUES (?, ?, ?, ?, ?, ?)";
+    // Insert ke database (Penting: menggunakan gudang_id)
+    $query = "INSERT INTO produk (gudang_id, nama, harga, stok, deskripsi, foto) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $connect->prepare($query); 
-    // Types: i (user_id), s (nama), d (harga), i (stok), s (deskripsi), s (path/foto)
-    $stmt->bind_param("isdiss", $user_id, $nama, $harga, $stok, $deskripsi, $path);
+    // Types: i (gudang_id), s (nama), d (harga), i (stok), s (deskripsi), s (path/foto)
+    $stmt->bind_param("isdiss", $active_gudang_id, $nama, $harga, $stok, $deskripsi, $path);
     
     if ($stmt->execute()) {
         $stmt->close();
         echo json_encode(['status' => 'success', 'message' => 'Produk berhasil ditambahkan!']);
     } else {
         $stmt->close();
-        if ($path) unlink($path); // Hapus foto jika insert gagal
-        echo json_encode(['status' => 'error', 'message' => 'Error database: ' . $connect->error]);
+        // Jika gagal insert, dan ada file yang terlanjur diupload, hapus file tersebut
+        if ($path && file_exists($path)) {
+            unlink($path);
+        }
+        echo json_encode(['status' => 'error', 'message' => 'Gagal menambahkan produk: ' . $connect->error]);
     }
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Akses tidak sah.']);
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => 'Metode permintaan tidak valid.']);
 }
-?>

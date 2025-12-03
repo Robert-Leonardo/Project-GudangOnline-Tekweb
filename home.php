@@ -1,8 +1,9 @@
 <?php
-// File: home.php (MODIFIED - Hapus Tautan Marketplace)
+// File: home.php (FINAL MODIFIED - Multi-Gudang, Responsive, Hapus Marketplace)
 session_start();
 include "config.php";
 
+// 1. Cek Koneksi dan Session
 if (!$connect || $connect->connect_error) {
     $_SESSION = [];
     session_unset();
@@ -17,13 +18,45 @@ if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
 }
 
 $current_user_id = $_SESSION['user_id'];
+$active_gudang_id = $_SESSION['active_gudang_id'] ?? null;
+$active_gudang_name = "Belum Dipilih";
 
-// 3. AMBIL DATA STATISTIK GUDANG (Prepared Statements)
+// 2. AMBIL NAMA GUDANG AKTIF (Jika ada)
+if ($active_gudang_id) {
+    $stmt_name = $connect->prepare("SELECT nama_gudang FROM gudang WHERE id = ? AND user_id = ?");
+    $stmt_name->bind_param("ii", $active_gudang_id, $current_user_id);
+    $stmt_name->execute();
+    $result_name = $stmt_name->get_result();
+    if ($data_name = $result_name->fetch_assoc()) {
+        $active_gudang_name = htmlspecialchars($data_name['nama_gudang']);
+    } else {
+        // Jika gudang ID di sesi tidak valid/tidak ditemukan, hapus ID gudang
+        unset($_SESSION['active_gudang_id']);
+        $active_gudang_id = null;
+        $active_gudang_name = "Tidak Valid, Silakan Pilih Ulang";
+    }
+    $stmt_name->close();
+}
+
+
+// 3. AMBIL DATA STATISTIK GABUNGAN (Menggunakan JOIN ke semua gudang milik user)
 $total_produk = 0;
 $total_stok = 0;
 $stok_habis = 0;
 
-$stmt = $connect->prepare("SELECT COUNT(id) AS total_produk, SUM(stok) AS total_stok FROM produk WHERE user_id = ?");
+// Query COUNT dan SUM via JOIN (Menghitung SEMUA produk dari SEMUA gudang user)
+$query_stats = "
+    SELECT 
+        COUNT(p.id) AS total_produk, 
+        SUM(p.stok) AS total_stok 
+    FROM 
+        produk p
+    JOIN 
+        gudang g ON p.gudang_id = g.id
+    WHERE 
+        g.user_id = ?
+";
+$stmt = $connect->prepare($query_stats);
 $stmt->bind_param("i", $current_user_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -33,7 +66,18 @@ if ($data = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-$stmt_habis = $connect->prepare("SELECT COUNT(id) AS stok_habis FROM produk WHERE user_id = ? AND stok = 0");
+// Query Stok Habis via JOIN
+$query_habis = "
+    SELECT 
+        COUNT(p.id) AS stok_habis 
+    FROM 
+        produk p
+    JOIN 
+        gudang g ON p.gudang_id = g.id
+    WHERE 
+        g.user_id = ? AND p.stok = 0
+";
+$stmt_habis = $connect->prepare($query_habis);
 $stmt_habis->bind_param("i", $current_user_id);
 $stmt_habis->execute();
 $result_habis = $stmt_habis->get_result();
@@ -50,6 +94,7 @@ header("Pragma: no-cache");
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title>Gudang Online Home</title>
     <style>
         body {
@@ -71,6 +116,8 @@ header("Pragma: no-cache");
             border-radius: 20px;
             box-shadow: 0 0 12px rgba(0,0,0,0.1);
             text-align: center;
+            padding: 20px; 
+            box-sizing: border-box;
         }
 
         h1 {
@@ -85,7 +132,7 @@ header("Pragma: no-cache");
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .stat-card {
@@ -118,22 +165,16 @@ header("Pragma: no-cache");
         .stat-card.stock-empty .stat-value { color: #dc3545; }
 
         .menu {
-            /* DIUBAH: Layout menjadi 2 kolom grid */
             display: grid; 
             grid-template-columns: repeat(2, 1fr);
             gap: 20px;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            margin-top: 20px;
         }
         
-        /* CSS untuk menu yang diubah menjadi 2 kolom */
-        .menu a:first-child {
-            /* Menyesuaikan lebar elemen pertama agar mengisi 1 kolom */
-            grid-column: auto;
-        }
-
         .btn {
             display: block;
-            width: 100%; /* Dibuat 100% agar mengisi grid */
+            width: 100%; 
             padding: 16px;
             text-align: center;
             border-radius: 8px;
@@ -145,30 +186,67 @@ header("Pragma: no-cache");
             box-sizing: border-box;
         }
 
-        .btn-blue {
-            background: #0d6efd;
-        }
+        .btn-primary { background: #007bff; } 
+        .btn-primary:hover { background: #0056b3; }
         
-        /* Warna Ungu Marketplace dihapus */
+        .btn-success { background: #28a745; } 
+        .btn-success:hover { background: #1e7e34; }
+        
+        .btn-info { background: #17a2b8; } 
+        .btn-info:hover { background: #138496; }
 
-        .btn-blue:hover {
-            background: #0b5ed7;
-        }
-        
         .btn-logout {
             background: #dc3545;
+            padding: 12px; 
+            font-size: 16px;
+            margin-top: 15px; 
         }
 
         .btn-logout:hover {
             background: #c82333;
         }
+
+        .active-gudang {
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 25px;
+        }
         
         @media (max-width: 768px) {
+            body {
+                align-items: flex-start;
+                padding-top: 20px;
+            }
+            
+            .container {
+                max-width: 100%;
+                margin: 0 10px;
+            }
+            
+            h1 {
+                font-size: 28px; 
+                margin-bottom: 20px;
+            }
+            
             .stats-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
             }
+            
+            .stat-value {
+                font-size: 30px; 
+            }
+            
             .menu {
-                grid-template-columns: 1fr; /* Tumpuk menu di mobile */
+                grid-template-columns: 1fr; 
+                gap: 15px;
+            }
+            
+            .btn {
+                font-size: 16px; 
+                padding: 14px;
             }
         }
     </style>
@@ -176,9 +254,14 @@ header("Pragma: no-cache");
 <body>
 
 <div class="container">
-    <h1>Halo, <?php echo htmlspecialchars($_SESSION['username']); ?>!</h1>
+    <h1>Halo, <?php echo htmlspecialchars($_SESSION['username']); ?>! 👋</h1>
     
-    <p>Selamat datang di Dasbor Gudang Anda. Berikut adalah ringkasan stok saat ini:</p>
+    <div class="active-gudang">
+        Gudang Aktif: <strong><?php echo $active_gudang_name; ?></strong> 
+        (ID Gudang: <?php echo $active_gudang_id ?? '-'; ?>)
+    </div>
+
+    <p>Ringkasan stok total dari **Semua Gudang** Anda:</p>
 
     <div class="stats-grid">
         <div class="stat-card total-product">
@@ -197,8 +280,16 @@ header("Pragma: no-cache");
     <p>Silakan pilih menu yang ingin Anda kelola:</p>
 
     <div class="menu">
-        <a href="lihat_stok.php" class="btn btn-blue">Lihat Gudang Anda</a>
-        <a href="kelola_stok.php" class="btn btn-blue">Kelola Stok & Tambah Produk</a>
+        <a href="pilih_gudang.php" class="btn btn-primary">Pilih / Kelola Gudang</a> 
+        
+        <?php if ($active_gudang_id): ?>
+            <a href="lihat_stok.php" class="btn btn-success">Lihat Galeri Stok</a> 
+            <a href="kelola_stok.php" class="btn btn-info">Kelola Stok & Produk</a>
+        <?php else: ?>
+            <div class="alert" style="grid-column: span 2; background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">
+                Pilih Gudang Aktif untuk mengelola Stok.
+            </div>
+        <?php endif; ?>
     </div>
     
     <a href="login.php?logout=true" class="btn btn-logout" onclick="return confirm('Apakah Anda yakin ingin keluar?');">Logout</a>
