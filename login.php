@@ -183,7 +183,7 @@ if (isset($_POST['login'])) {
 <body>
     <div class="wrapper">
         <div class="welcome-text">
-            Welcome to Gudang Online
+            Gudang Online
         </div>
         
         <div class="form-box" id="login-form">

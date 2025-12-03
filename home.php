@@ -1,9 +1,8 @@
 <?php
-// File: home.php (MODIFIED - Tambahan Tautan Marketplace)
+// File: home.php (MODIFIED - Hapus Tautan Marketplace)
 session_start();
 include "config.php";
 
-// ... (Logika Cek Koneksi, Cek Session, dan Ambil Statistik Gudang tetap sama) ...
 if (!$connect || $connect->connect_error) {
     $_SESSION = [];
     session_unset();
@@ -19,7 +18,7 @@ if (!isset($_SESSION['username']) || !isset($_SESSION['user_id'])) {
 
 $current_user_id = $_SESSION['user_id'];
 
-// 3. AMBIL DATA STATISTIK GUDANG (Tetap sama)
+// 3. AMBIL DATA STATISTIK GUDANG (Prepared Statements)
 $total_produk = 0;
 $total_stok = 0;
 $stok_habis = 0;
@@ -119,11 +118,17 @@ header("Pragma: no-cache");
         .stat-card.stock-empty .stat-value { color: #dc3545; }
 
         .menu {
-            /* Diubah menjadi 3 kolom grid */
+            /* DIUBAH: Layout menjadi 2 kolom grid */
             display: grid; 
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             margin-bottom: 40px;
+        }
+        
+        /* CSS untuk menu yang diubah menjadi 2 kolom */
+        .menu a:first-child {
+            /* Menyesuaikan lebar elemen pertama agar mengisi 1 kolom */
+            grid-column: auto;
         }
 
         .btn {
@@ -144,13 +149,7 @@ header("Pragma: no-cache");
             background: #0d6efd;
         }
         
-        /* Warna Baru untuk Marketplace */
-        .btn-purple {
-            background: #6f42c1;
-        }
-        .btn-purple:hover {
-            background: #5a34a1;
-        }
+        /* Warna Ungu Marketplace dihapus */
 
         .btn-blue:hover {
             background: #0b5ed7;
@@ -177,7 +176,7 @@ header("Pragma: no-cache");
 <body>
 
 <div class="container">
-    <h1>Halo, <?php echo htmlspecialchars($_SESSION['username']); ?>! 👋</h1>
+    <h1>Halo, <?php echo htmlspecialchars($_SESSION['username']); ?>!</h1>
     
     <p>Selamat datang di Dasbor Gudang Anda. Berikut adalah ringkasan stok saat ini:</p>
 
@@ -198,9 +197,7 @@ header("Pragma: no-cache");
     <p>Silakan pilih menu yang ingin Anda kelola:</p>
 
     <div class="menu">
-        <a href="marketplace.php" class="btn btn-purple">Lihat Semua Toko (Marketplace)</a> 
-        
-        <a href="lihat_stok.php" class="btn btn-blue">Lihat Toko Anda (Galeri)</a>
+        <a href="lihat_stok.php" class="btn btn-blue">Lihat Gudang Anda</a>
         <a href="kelola_stok.php" class="btn btn-blue">Kelola Stok & Tambah Produk</a>
     </div>
     
