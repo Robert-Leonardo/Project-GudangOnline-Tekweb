@@ -1,5 +1,5 @@
 <?php
-// File: edit_product.php (MODIFIED - Multi-Gudang Logic)
+// File: edit_product.php (UPDATED - Multi-Gudang Logic)
 error_reporting(0); 
 ini_set('display_errors', 0);
 
@@ -8,13 +8,12 @@ include "config.php";
 
 header('Content-Type: application/json');
 
-// Pastikan user login dan gudang aktif diset
+// Cek apakah user login DAN memiliki gudang aktif yang diset
 if (!isset($_SESSION['user_id']) || $_SERVER["REQUEST_METHOD"] !== "POST" || !isset($_SESSION['active_gudang_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Akses tidak sah / Gudang tidak aktif.']);
+    echo json_encode(['status' => 'error', 'message' => 'Akses tidak sah atau Gudang Aktif belum diset.']);
     exit();
 }
 
-$user_id = $_SESSION['user_id']; // Digunakan hanya untuk verifikasi kepemilikan
 $active_gudang_id = $_SESSION['active_gudang_id']; // ID Gudang Aktif
 $id = $_POST['edit_id'];
 $nama = $_POST['edit_nama'];
@@ -32,12 +31,10 @@ if (isset($_FILES['edit_foto']) && $_FILES['edit_foto']['error'] === UPLOAD_ERR_
     $fotoTmp = $_FILES['edit_foto']['tmp_name'];
     $folder = "uploads/";
 
-    // Pastikan folder ada
     if (!is_dir($folder)) {
         mkdir($folder, 0777, true);
     }
     
-    // Generate nama file unik
     $file_extension = strtolower(pathinfo($_FILES['edit_foto']['name'], PATHINFO_EXTENSION));
     $new_foto_name = uniqid('img_', true) . '.' . $file_extension;
     $new_foto_path = $folder . $new_foto_name;
@@ -48,24 +45,24 @@ if (isset($_FILES['edit_foto']) && $_FILES['edit_foto']['error'] === UPLOAD_ERR_
     }
 }
 
-// 2. Siapkan Query UPDATE (Penting: filter gudang_id)
+// 2. Siapkan Query UPDATE (PENTING: Memfilter berdasarkan gudang_id)
 $query = "UPDATE produk SET nama = ?, harga = ?, stok = ?, deskripsi = ?, foto = ? WHERE id = ? AND gudang_id = ?";
-// Prepare statement and validate
 $stmt = $connect->prepare($query);
+
 if (!$stmt) {
-    echo json_encode(['status' => 'error', 'message' => 'Gagal menyiapkan query: ' . $connect->error]);
-    // Jika gagal, dan ada file baru yang terlanjur diupload, hapus file tersebut
+    // Jika gagal menyiapkan query, hapus foto baru jika terlanjur diupload
     if ($file_uploaded && $new_foto_path && file_exists($new_foto_path)) {
         unlink($new_foto_path);
     }
+    echo json_encode(['status' => 'error', 'message' => 'Gagal menyiapkan query: ' . $connect->error]);
     exit();
 }
 
 // Parameter types: nama (s), harga (d), stok (i), deskripsi (s), foto (s), id (i), gudang_id (i)
-$stmt->bind_param("sdisii", $nama, $harga, $stok, $deskripsi, $new_foto_path, $id, $active_gudang_id);
+$stmt->bind_param("sdissii", $nama, $harga, $stok, $deskripsi, $new_foto_path, $id, $active_gudang_id);
 
 if ($stmt->execute()) {
-    // 3. Hapus foto lama jika foto baru berhasil diupload DAN path foto lama valid/berbeda
+    // 3. Hapus foto lama jika diganti
     if ($file_uploaded && $old_foto_path && $old_foto_path !== 'uploads/no-image.png' && file_exists($old_foto_path)) {
         unlink($old_foto_path);
     }
@@ -73,11 +70,11 @@ if ($stmt->execute()) {
     $stmt->close();
     echo json_encode(['status' => 'success', 'message' => 'Produk berhasil diperbarui!']);
 } else {
-    // Jika gagal update, dan ada file baru yang terlanjur diupload, hapus file tersebut
+    // Jika gagal update, hapus foto baru yang terlanjur diupload
     if ($file_uploaded && $new_foto_path && file_exists($new_foto_path)) {
         unlink($new_foto_path);
     }
     $stmt->close();
-    echo json_encode(['status' => 'error', 'message' => 'Gagal memperbarui produk: ' . $connect->error]);
+    echo json_encode(['status' => 'error', 'message' => 'Gagal update database: ' . $connect->error]);
 }
-?>
+// Tidak ada tag penutup PHP

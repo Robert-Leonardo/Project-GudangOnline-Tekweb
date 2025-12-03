@@ -1,5 +1,5 @@
 <?php
-// File: home.php (FINAL MODIFIED - Multi-Gudang, Responsive, Hapus Marketplace)
+// File: home.php (MODIFIED - Statistik Fokus ke Gudang Aktif)
 session_start();
 include "config.php";
 
@@ -23,6 +23,7 @@ $active_gudang_name = "Belum Dipilih";
 
 // 2. AMBIL NAMA GUDANG AKTIF (Jika ada)
 if ($active_gudang_id) {
+    // Pastikan gudang aktif adalah milik user
     $stmt_name = $connect->prepare("SELECT nama_gudang FROM gudang WHERE id = ? AND user_id = ?");
     $stmt_name->bind_param("ii", $active_gudang_id, $current_user_id);
     $stmt_name->execute();
@@ -30,7 +31,7 @@ if ($active_gudang_id) {
     if ($data_name = $result_name->fetch_assoc()) {
         $active_gudang_name = htmlspecialchars($data_name['nama_gudang']);
     } else {
-        // Jika gudang ID di sesi tidak valid/tidak ditemukan, hapus ID gudang
+        // Gudang ID tidak valid, hapus dari sesi
         unset($_SESSION['active_gudang_id']);
         $active_gudang_id = null;
         $active_gudang_name = "Tidak Valid, Silakan Pilih Ulang";
@@ -39,52 +40,54 @@ if ($active_gudang_id) {
 }
 
 
-// 3. AMBIL DATA STATISTIK GABUNGAN (Menggunakan JOIN ke semua gudang milik user)
+// 3. AMBIL DATA STATISTIK GUDANG AKTIF
 $total_produk = 0;
 $total_stok = 0;
 $stok_habis = 0;
+$is_stats_active = false; // Flag untuk menandai apakah statistik berhasil diambil
 
-// Query COUNT dan SUM via JOIN (Menghitung SEMUA produk dari SEMUA gudang user)
-$query_stats = "
-    SELECT 
-        COUNT(p.id) AS total_produk, 
-        SUM(p.stok) AS total_stok 
-    FROM 
-        produk p
-    JOIN 
-        gudang g ON p.gudang_id = g.id
-    WHERE 
-        g.user_id = ?
-";
-$stmt = $connect->prepare($query_stats);
-$stmt->bind_param("i", $current_user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($data = $result->fetch_assoc()) {
-    $total_produk = $data['total_produk'] ?? 0;
-    $total_stok = $data['total_stok'] ?? 0;
-}
-$stmt->close();
+if ($active_gudang_id) {
+    $is_stats_active = true;
+    
+    // Query COUNT dan SUM (FOKUS KE GUDANG AKTIF SAJA)
+    $query_stats = "
+        SELECT 
+            COUNT(id) AS total_produk, 
+            SUM(stok) AS total_stok 
+        FROM 
+            produk
+        WHERE 
+            gudang_id = ?
+    ";
+    $stmt = $connect->prepare($query_stats);
+    $stmt->bind_param("i", $active_gudang_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($data = $result->fetch_assoc()) {
+        $total_produk = $data['total_produk'] ?? 0;
+        $total_stok = $data['total_stok'] ?? 0;
+    }
+    $stmt->close();
 
-// Query Stok Habis via JOIN
-$query_habis = "
-    SELECT 
-        COUNT(p.id) AS stok_habis 
-    FROM 
-        produk p
-    JOIN 
-        gudang g ON p.gudang_id = g.id
-    WHERE 
-        g.user_id = ? AND p.stok = 0
-";
-$stmt_habis = $connect->prepare($query_habis);
-$stmt_habis->bind_param("i", $current_user_id);
-$stmt_habis->execute();
-$result_habis = $stmt_habis->get_result();
-if ($data_habis = $result_habis->fetch_assoc()) {
-    $stok_habis = $data_habis['stok_habis'] ?? 0;
+    // Query Stok Habis (FOKUS KE GUDANG AKTIF SAJA)
+    $query_habis = "
+        SELECT 
+            COUNT(id) AS stok_habis 
+        FROM 
+            produk
+        WHERE 
+            gudang_id = ? AND stok = 0
+    ";
+    $stmt_habis = $connect->prepare($query_habis);
+    $stmt_habis->bind_param("i", $active_gudang_id);
+    $stmt_habis->execute();
+    $result_habis = $stmt_habis->get_result();
+    if ($data_habis = $result_habis->fetch_assoc()) {
+        $stok_habis = $data_habis['stok_habis'] ?? 0;
+    }
+    $stmt_habis->close();
 }
-$stmt_habis->close();
+
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
@@ -260,9 +263,9 @@ header("Pragma: no-cache");
         Gudang Aktif: <strong><?php echo $active_gudang_name; ?></strong> 
         (ID Gudang: <?php echo $active_gudang_id ?? '-'; ?>)
     </div>
-
-    <p>Ringkasan stok total dari **Semua Gudang** Anda:</p>
-
+    
+    <p>Ringkasan stok dari Gudang **Aktif** Anda:</p>
+    
     <div class="stats-grid">
         <div class="stat-card total-product">
             <div class="stat-value"><?php echo number_format($total_produk); ?></div>
@@ -277,17 +280,18 @@ header("Pragma: no-cache");
             <div class="stat-label">Produk Stok Habis</div>
         </div>
     </div>
+    
     <p>Silakan pilih menu yang ingin Anda kelola:</p>
 
     <div class="menu">
         <a href="pilih_gudang.php" class="btn btn-primary">Pilih / Kelola Gudang</a> 
         
-        <?php if ($active_gudang_id): ?>
+        <?php if ($is_stats_active): ?>
             <a href="lihat_stok.php" class="btn btn-success">Lihat Galeri Stok</a> 
             <a href="kelola_stok.php" class="btn btn-info">Kelola Stok & Produk</a>
         <?php else: ?>
-            <div class="alert" style="grid-column: span 2; background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">
-                Pilih Gudang Aktif untuk mengelola Stok.
+            <div class="alert" style="grid-column: span 2; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; font-weight: bold;">
+                Pilih Gudang Aktif untuk melihat Statistik dan mengelola Stok.
             </div>
         <?php endif; ?>
     </div>

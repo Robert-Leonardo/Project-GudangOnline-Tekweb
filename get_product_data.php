@@ -1,5 +1,5 @@
 <?php
-// File: get_product_data.php (MODIFIED - Multi-Gudang Logic)
+// File: get_product_data.php (UPDATED - Multi-Gudang Logic)
 session_start();
 include "config.php";
 
@@ -8,16 +8,16 @@ ini_set('display_errors', 0);
 
 header('Content-Type: application/json');
 
-// Pastikan user login, memiliki ID produk, dan gudang aktif diset
+// Cek apakah user login, memiliki ID produk, DAN gudang aktif diset
 if (!isset($_SESSION['user_id']) || !isset($_GET['id']) || !isset($_SESSION['active_gudang_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Akses ditolak / Gudang tidak aktif.']);
+    echo json_encode(['status' => 'error', 'message' => 'Akses ditolak atau Gudang tidak aktif.']);
     exit();
 }
 
 $product_id = $_GET['id'];
-$active_gudang_id = $_SESSION['active_gudang_id'];
+$active_gudang_id = $_SESSION['active_gudang_id']; // Ambil gudang ID aktif
 
-// Ambil data produk spesifik yang dimiliki oleh gudang ini (Penting: filter gudang_id)
+// Query: Ambil data produk spesifik yang dimiliki oleh gudang ini
 $stmt = $connect->prepare("SELECT id, nama, harga, stok, deskripsi, foto FROM produk WHERE id = ? AND gudang_id = ?");
 $stmt->bind_param("ii", $product_id, $active_gudang_id);
 $stmt->execute();
@@ -25,7 +25,7 @@ $result = $stmt->get_result();
 
 if ($product = $result->fetch_assoc()) {
     $product['status'] = 'success';
-    // Beri path default jika kosong, agar JS tidak error
+    // Beri path default jika kosong
     $product['foto'] = $product['foto'] ?: 'uploads/no-image.png'; 
     echo json_encode($product);
 } else {
