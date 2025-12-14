@@ -98,7 +98,7 @@ header("Pragma: no-cache");
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Gudang Online Home</title>
+    <title>Home Gudang Online</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -264,7 +264,7 @@ header("Pragma: no-cache");
         (ID Gudang: <?php echo $active_gudang_id ?? '-'; ?>)
     </div>
     
-    <p>Ringkasan stok dari Gudang **Aktif** Anda:</p>
+    <p>Ringkasan stok</p>
     
     <div class="stats-grid">
         <div class="stat-card total-product">

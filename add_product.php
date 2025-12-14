@@ -1,5 +1,5 @@
 <?php
-// File: add_product.php (MODIFIED - Multi-Gudang Logic)
+// File: add_product.php (MODIFIED - Multi-Gudang Logic & Tanggal Update)
 session_start();
 include "config.php";
 
@@ -16,40 +16,42 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $nama = $_POST['nama'];
+    $nama = trim($_POST['nama']);
     $harga = isset($_POST['harga']) && is_numeric($_POST['harga']) ? (float)$_POST['harga'] : 0;
     $stok = isset($_POST['stok']) && is_numeric($_POST['stok']) ? (int)$_POST['stok'] : 0; 
     $deskripsi = isset($_POST['deskripsi']) ? trim($_POST['deskripsi']) : NULL; 
     
     header('Content-Type: application/json');
-    
-    if (empty($nama)) {
-        echo json_encode(['status' => 'error', 'message' => 'Nama Produk wajib diisi!']);
+
+    // 1. Validasi Input Dasar
+    if (empty($nama) || $harga < 0 || $stok < 0) {
+        echo json_encode(['status' => 'error', 'message' => 'Nama, Harga, dan Stok wajib diisi/valid.']);
         exit();
     }
     
-    // --- VALIDASI DUPLIKAT NAMA PRODUK (DI DALAM GUDANG AKTIF INI) ---
-    $check_stmt = $connect->prepare("SELECT id FROM produk WHERE nama = ? AND gudang_id = ?");
-    $check_stmt->bind_param("si", $nama, $active_gudang_id);
-    $check_stmt->execute();
-    $check_stmt->store_result();
+    // 2. Cek Duplikat Nama Produk di Gudang Aktif
+    $stmt_check = $connect->prepare("SELECT id FROM produk WHERE nama = ? AND gudang_id = ?");
+    $stmt_check->bind_param("si", $nama, $active_gudang_id);
+    $stmt_check->execute();
+    $stmt_check->store_result();
 
-    if ($check_stmt->num_rows > 0) {
-        $check_stmt->close();
-        echo json_encode(['status' => 'error', 'message' => 'Produk dengan nama ini sudah ada di gudang aktif Anda!']);
+    if ($stmt_check->num_rows > 0) {
+        $stmt_check->close();
+        echo json_encode(['status' => 'error', 'message' => 'Produk dengan nama tersebut sudah ada di gudang ini!']);
         exit();
     }
-    $check_stmt->close();
-    // --- END VALIDASI ---
+    $stmt_check->close();
 
-    $path = NULL; // Default tanpa foto
-    
-    // Proses Upload Foto (Jika ada file di-upload)
-    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-        $fotoName = $_FILES['foto']['name'];
-        $fotoTmp = $_FILES['foto']['tmp_name'];
-        $folder = "uploads/"; 
+    // 3. Upload Foto
+    $path = 'uploads/no-image.png'; // Default path jika tidak ada foto
+    $foto = $_FILES['foto'] ?? null;
 
+    if ($foto && $foto['error'] === UPLOAD_ERR_OK) {
+        $fotoName = $foto['name'];
+        $fotoTmp = $foto['tmp_name'];
+        $folder = "uploads/";
+
+        // Buat folder jika belum ada
         if (!is_dir($folder)) {
             mkdir($folder, 0777, true);
         }
@@ -65,8 +67,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // Insert ke database (Penting: menggunakan gudang_id)
-    $query = "INSERT INTO produk (gudang_id, nama, harga, stok, deskripsi, foto) VALUES (?, ?, ?, ?, ?, ?)";
+    // [MODIFIKASI DI SINI] Insert ke database dengan tanggal_update = NOW()
+    $query = "INSERT INTO produk (gudang_id, nama, harga, stok, deskripsi, foto, tanggal_update) VALUES (?, ?, ?, ?, ?, ?, NOW())";
     $stmt = $connect->prepare($query); 
     // Types: i (gudang_id), s (nama), d (harga), i (stok), s (deskripsi), s (path/foto)
     $stmt->bind_param("isdiss", $active_gudang_id, $nama, $harga, $stok, $deskripsi, $path);
@@ -77,12 +79,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
         $stmt->close();
         // Jika gagal insert, dan ada file yang terlanjur diupload, hapus file tersebut
-        if ($path && file_exists($path)) {
+        if ($path && $path !== 'uploads/no-image.png' && file_exists($path)) {
             unlink($path);
         }
-        echo json_encode(['status' => 'error', 'message' => 'Gagal menambahkan produk: ' . $connect->error]);
+        echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data produk ke database: ' . $connect->error]);
     }
 } else {
     header('Content-Type: application/json');
-    echo json_encode(['status' => 'error', 'message' => 'Metode permintaan tidak valid.']);
+    echo json_encode(['status' => 'error', 'message' => 'Metode request tidak diizinkan.']);
 }
+?>

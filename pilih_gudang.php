@@ -25,17 +25,16 @@ if (isset($_POST['tambah_gudang'])) {
         if ($stmt_check->num_rows > 0) {
             $message = "<div class='alert error'>Anda sudah memiliki gudang dengan nama '$nama_gudang'.</div>";
         } else {
-            // Insert Gudang Baru
-            $stmt_insert = $connect->prepare("INSERT INTO gudang (user_id, nama_gudang) VALUES (?, ?)");
+            // [MODIFIKASI DI SINI] Insert Gudang Baru dengan tanggal_buat
+            $stmt_insert = $connect->prepare("INSERT INTO gudang (user_id, nama_gudang, tanggal_buat) VALUES (?, ?, NOW())");
             $stmt_insert->bind_param("is", $current_user_id, $nama_gudang);
             
             if ($stmt_insert->execute()) {
                 $new_gudang_id = $stmt_insert->insert_id;
-                // Langsung set gudang baru sebagai aktif
-                $_SESSION['active_gudang_id'] = $new_gudang_id;
-                $message = "<div class='alert success'>Gudang '$nama_gudang' berhasil ditambahkan dan diaktifkan!</div>";
+                $_SESSION['active_gudang_id'] = $new_gudang_id; // Set sebagai gudang aktif
+                $message = "<div class='alert success'>Gudang '$nama_gudang' berhasil dibuat dan diaktifkan!</div>";
             } else {
-                $message = "<div class='alert error'>Gagal menambahkan gudang: " . $stmt_insert->error . "</div>";
+                $message = "<div class='alert error'>Gagal membuat gudang: " . $stmt_insert->error . "</div>";
             }
             $stmt_insert->close();
         }
@@ -43,185 +42,151 @@ if (isset($_POST['tambah_gudang'])) {
     }
 }
 
-// --- LOGIKA PILIH GUDANG (SET ACTIVE) ---
+// --- LOGIKA PILIH GUDANG ---
 if (isset($_POST['select_gudang'])) {
-    $gudang_id = $_POST['gudang_id'];
+    $gudang_id = (int)$_POST['gudang_id'];
     
-    // VALIDASI: Pastikan gudang_id adalah milik user
-    $stmt = $connect->prepare("SELECT nama_gudang FROM gudang WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $gudang_id, $current_user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // Verifikasi kepemilikan
+    $stmt_verify = $connect->prepare("SELECT id FROM gudang WHERE id = ? AND user_id = ?");
+    $stmt_verify->bind_param("ii", $gudang_id, $current_user_id);
+    $stmt_verify->execute();
+    $stmt_verify->store_result();
 
-    if ($result->num_rows == 1) {
-        $data = $result->fetch_assoc();
+    if ($stmt_verify->num_rows > 0) {
         $_SESSION['active_gudang_id'] = $gudang_id;
-        $message = "<div class='alert success'>Gudang '{$data['nama_gudang']}' berhasil diaktifkan. Anda akan diarahkan...</div>";
-        echo "<script>
-            setTimeout(function() {
-                window.location.href = 'home.php';
-            }, 1500);
-        </script>";
+        header("Location: home.php");
+        exit();
     } else {
-        $message = "<div class='alert error'>Akses ditolak: Gudang tidak valid!</div>";
+        $message = "<div class='alert error'>Akses ke gudang ini ditolak.</div>";
     }
-    $stmt->close();
+    $stmt_verify->close();
 }
 
 // --- LOGIKA HAPUS GUDANG ---
 if (isset($_POST['hapus_gudang'])) {
-    $gudang_id = $_POST['gudang_id_hapus'];
+    $gudang_id_hapus = (int)$_POST['gudang_id_hapus'];
     
-    // VALIDASI & HAPUS
-    $stmt = $connect->prepare("DELETE FROM gudang WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $gudang_id, $current_user_id);
+    // Hapus Produk yang terkait dengan gudang ini (CASCADE DELETE atau manual)
+    $stmt_del_prod = $connect->prepare("DELETE FROM produk WHERE gudang_id = ?");
+    $stmt_del_prod->bind_param("i", $gudang_id_hapus);
+    $stmt_del_prod->execute();
+    $stmt_del_prod->close();
 
-    if ($stmt->execute()) {
-        $message = "<div class='alert success'>Gudang berhasil dihapus (beserta semua produk di dalamnya).</div>";
-        // Jika gudang aktif yang dihapus, hapus dari session
-        if (isset($_SESSION['active_gudang_id']) && $_SESSION['active_gudang_id'] == $gudang_id) {
+    // Hapus Gudang
+    $stmt_del_gudang = $connect->prepare("DELETE FROM gudang WHERE id = ? AND user_id = ?");
+    $stmt_del_gudang->bind_param("ii", $gudang_id_hapus, $current_user_id);
+    
+    if ($stmt_del_gudang->execute() && $stmt_del_gudang->affected_rows > 0) {
+        $message = "<div class='alert success'>Gudang berhasil dihapus.</div>";
+        // Jika gudang aktif yang dihapus, unset session active_gudang_id
+        if (isset($_SESSION['active_gudang_id']) && $_SESSION['active_gudang_id'] == $gudang_id_hapus) {
             unset($_SESSION['active_gudang_id']);
+            // Redirect agar session bersih dan user kembali ke home
+            header("Location: pilih_gudang.php");
+            exit();
         }
     } else {
-        $message = "<div class='alert error'>Gagal menghapus gudang: " . $stmt->error . "</div>";
+        $message = "<div class='alert error'>Gagal menghapus gudang atau gudang tidak ditemukan.</div>";
     }
-    $stmt->close();
+    $stmt_del_gudang->close();
 }
 
-
 // --- AMBIL DAFTAR GUDANG USER ---
-$list_gudang = [];
-$stmt_list = $connect->prepare("SELECT id, nama_gudang FROM gudang WHERE user_id = ? ORDER BY nama_gudang ASC");
+$gudang_list = [];
+$active_gudang_id = $_SESSION['active_gudang_id'] ?? null;
+
+// Ambil gudang list milik user saat ini
+$stmt_list = $connect->prepare("SELECT id, nama_gudang, tanggal_buat FROM gudang WHERE user_id = ? ORDER BY id DESC");
 $stmt_list->bind_param("i", $current_user_id);
 $stmt_list->execute();
 $result_list = $stmt_list->get_result();
+
 while ($row = $result_list->fetch_assoc()) {
-    $list_gudang[] = $row;
+    $gudang_list[] = $row;
 }
 $stmt_list->close();
-
-$active_gudang_id = $_SESSION['active_gudang_id'] ?? null;
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kelola Gudang</title>
+    <title>Pilih Gudang</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to left, white, rgb(120, 120, 236));
-            margin: 0;
-            padding: 30px 15px;
-            display: flex;
-            justify-content: center;
-        }
-        .container {
-            max-width: 800px;
-            width: 100%;
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
+        /* Gaya CSS disesuaikan agar mudah dibaca */
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #333; margin-bottom: 25px; }
-        .btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-            transition: background-color 0.2s;
-        }
-        .btn-success { background: #28a745; color: white; }
+        input[type="text"] { width: 70%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; margin-right: 5px; }
+        button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-success { background: #28a745; }
         .btn-success:hover { background: #218838; }
-        .btn-danger { background: #dc3545; color: white; }
-        .btn-danger:hover { background: #c82333; }
-        .btn-back { margin-bottom: 20px; color: #555; display: block; }
-        .form-group { margin-bottom: 15px; }
-        input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; }
-
-        .gudang-list { margin-top: 20px; }
-        .gudang-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
-        }
-        .gudang-card.active {
-            border: 2px solid #007bff;
-            background: #e9f5ff;
-        }
-        .gudang-info { font-weight: bold; }
-        .gudang-actions button { margin-left: 10px; }
-        .alert { padding: 10px; margin-bottom: 20px; border-radius: 5px; font-weight: bold; }
-        .alert.success { background: #d4edda; color: #155724; border-color: #c3e6cb; }
-        .alert.error { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
-
-        @media (max-width: 600px) {
-            .gudang-card { flex-direction: column; align-items: flex-start; }
-            .gudang-actions { margin-top: 10px; }
-            .gudang-actions button { margin-left: 0; margin-right: 10px; margin-bottom: 5px; width: 100%; display: block; }
-        }
+        .btn-primary { background: #007bff; }
+        .btn-danger { background: #dc3545; }
+        .form-tambah { display: flex; margin-bottom: 20px; }
+        .gudang-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; background: #f9f9f9; }
+        .gudang-item.active { border-left: 5px solid #007bff; background: #e9f5ff; }
+        .gudang-name { font-weight: bold; font-size: 1.1em; }
+        .gudang-actions button { margin-left: 5px; padding: 8px 12px; }
+        .alert { padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; }
+        .alert.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .btn-back { display: block; margin-bottom: 20px; text-decoration: none; color: #555; }
+        /* Tambahan gaya untuk tanggal */
+        .gudang-date { font-size: 0.8em; color: #6c757d; margin-top: 2px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <a href="home.php" class="btn-back">← Kembali ke Beranda</a>
-    <h2>Kelola Gudang Anda</h2>
+    <h2>Kelola dan Pilih Gudang</h2>
 
     <?php echo $message; ?>
 
-    <div style="border: 1px solid #ccc; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h3>Tambah Gudang Baru</h3>
-        <form method="POST">
-            <div class="form-group">
-                <input type="text" name="nama_gudang" placeholder="Nama Gudang Baru" required>
-            </div>
-            <button type="submit" name="tambah_gudang" class="btn btn-success" style="width: 100%;">Tambahkan & Aktifkan</button>
-        </form>
-    </div>
+    <h3>Tambah Gudang Baru</h3>
+    <form method="POST" class="form-tambah">
+        <input type="text" name="nama_gudang" placeholder="Nama Gudang Baru" required>
+        <button type="submit" name="tambah_gudang" class="btn-success">Tambah</button>
+    </form>
 
-    <h3>Daftar Gudang (Pilih yang Aktif)</h3>
-    <div class="gudang-list">
-        <?php if (empty($list_gudang)): ?>
-            <div class="alert error">Anda belum memiliki gudang. Silakan tambahkan satu di atas.</div>
-        <?php else: ?>
-            <?php foreach ($list_gudang as $gudang): ?>
-                <div class="gudang-card <?php echo ($gudang['id'] == $active_gudang_id) ? 'active' : ''; ?>">
-                    <div class="gudang-info">
+    <hr>
+
+    <h3>Daftar Gudang Anda (<?php echo count($gudang_list); ?>)</h3>
+    <?php if (empty($gudang_list)): ?>
+        <div class="alert error">Anda belum memiliki gudang. Silakan buat satu!</div>
+    <?php else: ?>
+        <?php foreach ($gudang_list as $gudang): ?>
+            <div class="gudang-item <?php echo ($gudang['id'] == $active_gudang_id) ? 'active' : ''; ?>">
+                <div>
+                    <div class="gudang-name">
                         <?php echo htmlspecialchars($gudang['nama_gudang']); ?>
                         <?php if ($gudang['id'] == $active_gudang_id): ?>
-                            <span style="color: #007bff; font-size: 12px;">(AKTIF)</span>
+                            <span style="color: #007bff; font-size: 12px; font-weight: normal;">(AKTIF)</span>
                         <?php endif; ?>
                     </div>
-                    <div class="gudang-actions">
-                        <?php if ($gudang['id'] != $active_gudang_id): ?>
-                            <form method="POST" style="display: inline;">
-                                <input type="hidden" name="gudang_id" value="<?php echo $gudang['id']; ?>">
-                                <button type="submit" name="select_gudang" class="btn btn-primary" style="background: #007bff; color: white;">Aktifkan</button>
-                            </form>
-                        <?php endif; ?>
-                        
-                        <form method="POST" style="display: inline;" onsubmit="return confirm('PERINGATAN! Semua produk dalam gudang ini akan dihapus. Lanjutkan menghapus Gudang <?php echo addslashes(htmlspecialchars($gudang['nama_gudang'])); ?>?');">
-                            <input type="hidden" name="gudang_id_hapus" value="<?php echo $gudang['id']; ?>">
-                            <button type="submit" name="hapus_gudang" class="btn btn-danger">Hapus</button>
-                        </form>
+                    <div class="gudang-date">
+                        Dibuat: <?php echo $gudang['tanggal_buat'] ? date('d/m/Y H:i', strtotime($gudang['tanggal_buat'])) : '-'; ?>
                     </div>
                 </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+                <div class="gudang-actions">
+                    <?php if ($gudang['id'] != $active_gudang_id): ?>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="gudang_id" value="<?php echo $gudang['id']; ?>">
+                            <button type="submit" name="select_gudang" class="btn btn-primary" style="background: #007bff; color: white;">Aktifkan</button>
+                        </form>
+                    <?php endif; ?>
+                    
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('PERINGATAN! Semua produk dalam gudang ini akan dihapus. Lanjutkan menghapus Gudang <?php echo addslashes(htmlspecialchars($gudang['nama_gudang'])); ?>?');">
+                        <input type="hidden" name="gudang_id_hapus" value="<?php echo $gudang['id']; ?>">
+                        <button type="submit" name="hapus_gudang" class="btn btn-danger">Hapus</button>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
 
 </div>
-
+    
 </body>
 </html>

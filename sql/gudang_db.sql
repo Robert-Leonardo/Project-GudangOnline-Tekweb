@@ -35,3 +35,7 @@ CREATE TABLE `produk` (
     REFERENCES `gudang`(`id`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+ALTER TABLE gudang ADD tanggal_buat DATETIME NULL;
+ALTER TABLE produk ADD tanggal_update DATETIME NULL;
