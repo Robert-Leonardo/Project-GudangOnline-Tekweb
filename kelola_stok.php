@@ -98,35 +98,128 @@ $gudang_name_query->close();
     <title>Kelola Stok | <?php echo htmlspecialchars($active_gudang_name); ?></title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        /* CSS yang disesuaikan */
-        body { font-family: sans-serif; background: #f8f9fa; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
-        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; text-decoration: none; font-weight: bold; margin-right: 5px; }
+        body { 
+            font-family: sans-serif; 
+            background: #f8f9fa; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.05); 
+        }
+        h2 { 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+        }
+        .btn { 
+            padding: 8px 15px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            color: white; 
+            text-decoration: none; 
+            font-weight: bold; 
+            margin-right: 5px; 
+        }
         .btn-success { background: #28a745; }
         .btn-info { background: #17a2b8; }
         .btn-danger { background: #dc3545; }
         .btn-secondary { background: #6c757d; }
         .btn-warning { background: #ffc107; color: #343a40; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; vertical-align: middle; }
-        th { background: #343a40; color: white; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        th, td { 
+            padding: 12px; 
+            border: 1px solid #ddd; 
+            text-align: left; 
+            vertical-align: middle; 
+        }
+        th { 
+            background: #343a40; 
+            color: white; 
+        }
         tr:nth-child(even) { background-color: #f2f2f2; }
-        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; }
-        input[type="number"] { width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; }
+        .product-img { 
+            width: 50px; 
+            height: 50px; 
+            object-fit: cover; 
+            border-radius: 5px; 
+        }
+        input[type="number"] { 
+            width: 70px; 
+            padding: 5px; 
+            border: 1px solid #ccc; 
+            border-radius: 3px; 
+        }
 
         /* Modal Styles */
-        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 10px; }
-        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
-        .close:hover, .close:focus { color: black; text-decoration: none; cursor: pointer; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1; left: 0; 
+            top: 0; width: 100%; 
+            height: 100%; overflow: auto; 
+            background-color: rgba(0,0,0,0.4); 
+        }
+        .modal-content { 
+            background-color: #fefefe; 
+            margin: 5% auto; 
+            padding: 20px; 
+            border: 1px solid #888; 
+            width: 80%; 
+            max-width: 600px; 
+            border-radius: 10px; }
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+        }
+        .close:hover, .close:focus { 
+            color: black; 
+            text-decoration: none; 
+            cursor: pointer; 
+        }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        .form-group button { margin-top: 10px; width: auto; }
-        .alert-empty { text-align: center; color: #6c757d; padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; background: #e9ecef; }
-        .last-update { font-size: 0.8em; color: #6c757d; margin-top: 5px; display: block; }
+        .form-group label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+        }
+        .form-group input, .form-group textarea { 
+            width: 100%; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+        }
+        .form-group button { 
+            margin-top: 10px; 
+            width: auto; 
+        }
+        .alert-empty { 
+            text-align: center; 
+            color: #6c757d; 
+            padding: 15px; 
+            border: 1px solid #dee2e6; 
+            border-radius: 5px; 
+            background: #e9ecef; 
+        }
+        .last-update { 
+            font-size: 0.8em; 
+            color: #6c757d; 
+            margin-top: 5px; 
+            display: block; 
+        }
     </style>
 </head>
 <body>
@@ -256,7 +349,7 @@ $gudang_name_query->close();
                 <label for="edit_foto">Ganti Foto Baru</label>
                 <input type="file" id="edit_foto" name="edit_foto" accept="image/*">
             </div>
-            <button type="submit" class="btn btn-primary">Update Detail</button>
+            <button type="submit" class="btn btn-warning">Update Detail</button>
         </form>
     </div>
 </div>
