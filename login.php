@@ -1,9 +1,7 @@
 <?php
-// File: login.php (MODIFIED - Menyimpan user_id & UI Fix)
 session_start(); 
 include 'config.php';
 
-// --- LOGIKA LOGOUT "KERAS" ---
 if (isset($_GET['logout'])) {
     $_SESSION = [];
     session_unset();
@@ -21,7 +19,7 @@ if (isset($_GET['logout'])) {
     exit();
 }
 
-// ---------------- LOGIKA LOGIN ----------------
+// Login
 if (isset($_POST['login'])) {
     $username = $_POST['username'];
     $password = $_POST['password'];
@@ -42,9 +40,7 @@ if (isset($_POST['login'])) {
             // Login Berhasil
             session_regenerate_id(true);
             
-            // --- BARIS KRUSIAL: SIMPAN ID USER ---
             $_SESSION['user_id'] = $id; 
-            // ------------------------------------
             $_SESSION['username'] = $username;
 
             header("Location: home.php");
@@ -67,7 +63,6 @@ if (isset($_POST['login'])) {
     <title>Login Page</title>
 
     <style>
-        /* CSS Fix untuk memastikan form terlihat */
         body {
             display: flex;
             justify-content: center;
@@ -76,18 +71,15 @@ if (isset($_POST['login'])) {
             background: linear-gradient(to right, #ffffff, #63a4ff);
             color: #333;
             margin: 0;
-            /* Font dasar sans-serif */
             font-family: Arial, sans-serif; 
         }
         
-        /* CSS Diperbarui untuk teks sambutan - Jarak Didekatkan */
         .welcome-text {
             font-family: inherit;
             font-size: 38px; 
             font-weight: 900; 
             color: #0d6efd; 
             margin-bottom: 20px;
-            /* NILAI DIKECILKAN: Ini akan menggeser teks ke bawah, mendekati form */
             margin-top: -100px; 
             text-align: center;
             padding: 10px 0;
@@ -121,7 +113,6 @@ if (isset($_POST['login'])) {
             box-sizing: border-box;
             backface-visibility: hidden; 
             transition: transform 0.8s;
-            /* NILAI DIKECILKAN: Ini akan menggeser form ke atas, mendekati teks */
             top: 100px; 
         }
 
@@ -175,7 +166,6 @@ if (isset($_POST['login'])) {
             font-weight: bold;
         }
         
-        /* Flip Logic CSS */
         #login-form { transform: rotateY(0deg); }
         #register-form { transform: rotateY(180deg); }
     </style>

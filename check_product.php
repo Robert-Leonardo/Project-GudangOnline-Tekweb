@@ -1,5 +1,4 @@
 <?php
-// File: check_product.php (MODIFIED - Multi-Gudang Logic)
 session_start();
 include "config.php";
 

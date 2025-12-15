@@ -1,5 +1,4 @@
 <?php
-// File: home.php (MODIFIED - Statistik Fokus ke Gudang Aktif)
 session_start();
 include "config.php";
 

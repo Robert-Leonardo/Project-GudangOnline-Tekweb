@@ -1,6 +1,4 @@
 <?php
-// File: DB.php - Class Koneksi Database (OOP)
-
 class DB {
     private $host = "localhost";
     private $user = "root";
@@ -37,7 +35,7 @@ class DB {
     public function executeStatement($query, $types, $params) {
         $stmt = $this->conn->prepare($query);
         if (!$stmt) {
-            return false; // Error prepare
+            return false;
         }
         $stmt->bind_param($types, ...$params);
         $result = $stmt->execute();

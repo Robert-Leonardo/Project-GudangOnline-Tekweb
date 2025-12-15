@@ -113,27 +113,96 @@ $stmt_list->close();
     <meta charset="UTF-8">
     <title>Pilih Gudang</title>
     <style>
-        /* Gaya CSS disesuaikan agar mudah dibaca */
-        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; margin-bottom: 25px; }
-        input[type="text"] { width: 70%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; margin-right: 5px; }
-        button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        body { 
+            font-family: sans-serif; 
+            background: #f4f4f4; 
+            padding: 20px; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.1); 
+        }
+        h2 { 
+            text-align: center; 
+            color: #333; 
+            margin-bottom: 25px; 
+        }
+        input[type="text"] { 
+            width: 70%; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+            margin-right: 5px; 
+        }
+        button { padding: 10px 15px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            color: white; 
+            font-weight: bold; 
+        }
         .btn-success { background: #28a745; }
         .btn-success:hover { background: #218838; }
         .btn-primary { background: #007bff; }
         .btn-danger { background: #dc3545; }
-        .form-tambah { display: flex; margin-bottom: 20px; }
-        .gudang-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; border: 1px solid #eee; border-radius: 8px; background: #f9f9f9; }
-        .gudang-item.active { border-left: 5px solid #007bff; background: #e9f5ff; }
-        .gudang-name { font-weight: bold; font-size: 1.1em; }
-        .gudang-actions button { margin-left: 5px; padding: 8px 12px; }
-        .alert { padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; }
-        .alert.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .alert.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .btn-back { display: block; margin-bottom: 20px; text-decoration: none; color: #555; }
-        /* Tambahan gaya untuk tanggal */
-        .gudang-date { font-size: 0.8em; color: #6c757d; margin-top: 2px; }
+        .form-tambah {
+            display: flex; 
+            margin-bottom: 20px; 
+        }
+        .gudang-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 15px; 
+            margin-bottom: 10px; 
+            border: 1px solid #eee; 
+            border-radius: 8px; 
+            background: #f9f9f9; 
+        }
+        .gudang-item.active { 
+            border-left: 5px solid #007bff; 
+            background: #e9f5ff; 
+        }
+        .gudang-name { 
+            font-weight: bold; 
+            font-size: 1.1em; 
+        }
+        .gudang-actions button { 
+            margin-left: 5px; 
+            padding: 8px 12px; 
+        }
+        .alert { 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 15px; 
+            font-weight: bold; 
+        }
+        .alert.error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .alert.success { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .btn-back { 
+            display: block; 
+            margin-bottom: 20px; 
+            text-decoration: none; 
+            color: #555; 
+        }
+        .gudang-date { 
+            font-size: 0.8em; 
+            color: #6c757d; 
+            margin-top: 2px; 
+        }
     </style>
 </head>
 <body>

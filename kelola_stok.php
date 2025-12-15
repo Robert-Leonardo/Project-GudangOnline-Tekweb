@@ -1,5 +1,4 @@
 <?php
-// File: kelola_stok.php (FINAL MODIFIED - Multi-Gudang Logic & Tanggal Update Stok)
 error_reporting(0); 
 ini_set('display_errors', 0); 
 

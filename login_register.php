@@ -1,8 +1,6 @@
 <?php
-// File: login_register.php (Original)
 session_start();
 
-// 1. Cek apakah user sudah login. Jika iya, redirect ke home.
 if (isset($_SESSION['username'])) {
     header("Location: home.php");
     exit();
@@ -15,7 +13,6 @@ if (isset($_POST['register'])) {
     
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
     $password = isset($_POST['password']) ? $_POST['password'] : '';
-    // Menangkap input confirm_password
     $confirm_password = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
 
     if ($username === '' || $password === '' || $confirm_password === '') {

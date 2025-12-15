@@ -1,5 +1,4 @@
 <?php
-// File: add_product.php (MODIFIED - Multi-Gudang Logic & Tanggal Update)
 session_start();
 include "config.php";
 
@@ -43,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt_check->close();
 
     // 3. Upload Foto
-    $path = 'uploads/no-image.png'; // Default path jika tidak ada foto
+    $path = 'uploads/no-image.png';
     $foto = $_FILES['foto'] ?? null;
 
     if ($foto && $foto['error'] === UPLOAD_ERR_OK) {

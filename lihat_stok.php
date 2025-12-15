@@ -1,5 +1,4 @@
 <?php
-// File: lihat_stok.php (MODIFIED - Multi-Gudang Logic)
 session_start();
 include "config.php";
 
