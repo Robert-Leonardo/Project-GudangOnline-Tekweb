@@ -1,13 +1,10 @@
 <?php
 session_start();
-// File: tambah_produk.php
-// 1. CEK LOGIN
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit(); 
 }
 
-// 2. MATIKAN CACHE
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
