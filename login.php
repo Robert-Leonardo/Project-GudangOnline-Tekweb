@@ -30,19 +30,32 @@ if (isset($_POST['login'])) {
     $stmt->execute();
     $stmt->store_result();
     
-    // Bind hasil ke $id dan $hashed_password
     $stmt->bind_result($id, $hashed_password); 
 
     if ($stmt->num_rows == 1) {
         $stmt->fetch();
         
+        $login_ok = false;
+
         if (password_verify($password, $hashed_password)) {
-            // Login Berhasil
+            $login_ok = true;
+        }
+
+        if (!$login_ok && md5($password) === $hashed_password) {
+            $login_ok = true;
+            $new_hash = password_hash($password, PASSWORD_DEFAULT);
+            $up = $connect->prepare("UPDATE usernames SET password = ? WHERE id = ?");
+            if ($up) {
+                $up->bind_param("si", $new_hash, $id);
+                $up->execute();
+                $up->close();
+            }
+        }
+
+        if ($login_ok) {
             session_regenerate_id(true);
-            
             $_SESSION['user_id'] = $id; 
             $_SESSION['username'] = $username;
-
             header("Location: home.php");
             exit();
         } else {
