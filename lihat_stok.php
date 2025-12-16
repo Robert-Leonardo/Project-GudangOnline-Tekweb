@@ -20,7 +20,7 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Ambil Nama Gudang Aktif untuk Judul
+// Ambil nama gudang yang aktif
 $gudang_name_query = $connect->prepare("SELECT nama_gudang FROM gudang WHERE id = ?");
 $gudang_name_query->bind_param("i", $active_gudang_id);
 $gudang_name_query->execute();
@@ -82,7 +82,9 @@ $gudang_name_query->close();
             transition: background-color 0.2s;
             margin-top: 10px;
         }
-        .btn-back:hover { background: #5a6268; }
+        .btn-back:hover { 
+            background: #5a6268; 
+        }
 
         .product-grid {
             display: grid;
@@ -200,7 +202,7 @@ $gudang_name_query->close();
 
     <div class="product-grid">
         <?php
-        // Query hanya mengambil produk dari gudang aktif (Penting: filter gudang_id)
+        // Query hanya mengambil produk dari gudang aktif
         $query = $connect->prepare("
             SELECT 
                 id, nama, harga, stok, deskripsi, foto 

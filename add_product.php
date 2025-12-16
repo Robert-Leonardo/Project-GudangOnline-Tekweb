@@ -66,10 +66,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // [MODIFIKASI DI SINI] Insert ke database dengan tanggal_update = NOW()
     $query = "INSERT INTO produk (gudang_id, nama, harga, stok, deskripsi, foto, tanggal_update) VALUES (?, ?, ?, ?, ?, ?, NOW())";
     $stmt = $connect->prepare($query); 
-    // Types: i (gudang_id), s (nama), d (harga), i (stok), s (deskripsi), s (path/foto)
     $stmt->bind_param("isdiss", $active_gudang_id, $nama, $harga, $stok, $deskripsi, $path);
     
     if ($stmt->execute()) {
@@ -77,7 +75,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         echo json_encode(['status' => 'success', 'message' => 'Produk berhasil ditambahkan!']);
     } else {
         $stmt->close();
-        // Jika gagal insert, dan ada file yang terlanjur diupload, hapus file tersebut
         if ($path && $path !== 'uploads/no-image.png' && file_exists($path)) {
             unlink($path);
         }

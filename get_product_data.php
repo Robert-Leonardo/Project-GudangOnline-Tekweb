@@ -1,5 +1,4 @@
 <?php
-// File: get_product_data.php (UPDATED - Multi-Gudang Logic)
 session_start();
 include "config.php";
 
@@ -25,7 +24,6 @@ $result = $stmt->get_result();
 
 if ($product = $result->fetch_assoc()) {
     $product['status'] = 'success';
-    // Beri path default jika kosong
     $product['foto'] = $product['foto'] ?: 'uploads/no-image.png'; 
     echo json_encode($product);
 } else {
